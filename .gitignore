@@ -1,0 +1,21 @@
+# This file is used to ignore files and directories that should not be tracked by Git.
+
+# Godot-specific
+.import/
+.export/
+.godot/
+
+# builds
+bin/
+Builds/
+*.exe
+*.dll
+*.pdb
+*.mono/
+*.mono-temp/
+*.csproj.user
+
+
+# VS Code
+.vscode/
+.history/
