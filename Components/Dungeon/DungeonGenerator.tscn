@@ -1,6 +1,34 @@
-[gd_scene load_steps=2 format=3 uid="uid://btrd82av6j5pk"]
+[gd_scene load_steps=8 format=3 uid="uid://btrd82av6j5pk"]
 
 [ext_resource type="Script" uid="uid://dh0cisaqevjns" path="res://Components/Dungeon/DungeonGenerator.cs" id="1_s7lx6"]
+[ext_resource type="Texture2D" uid="uid://tt3k67qo0sch" path="res://Assets/Sprites/selected.png" id="2_vu2o7"]
+[ext_resource type="Texture2D" uid="uid://desyhsevsfgoa" path="res://Assets/Sprites/tile.png" id="3_0hdbv"]
 
-[node name="DungeonGenerator" type="Node"]
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_7gekr"]
+texture = ExtResource("2_vu2o7")
+texture_region_size = Vector2i(128, 128)
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_1ffaq"]
+tile_size = Vector2i(128, 128)
+sources/0 = SubResource("TileSetAtlasSource_7gekr")
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_vu2o7"]
+texture = ExtResource("3_0hdbv")
+texture_region_size = Vector2i(128, 128)
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_0hdbv"]
+tile_size = Vector2i(128, 128)
+sources/0 = SubResource("TileSetAtlasSource_vu2o7")
+
+[node name="DungeonGenerator" type="Node2D" node_paths=PackedStringArray("FloorLayer", "WallLayer")]
 script = ExtResource("1_s7lx6")
+FloorLayer = NodePath("TileMapLayer2")
+WallLayer = NodePath("TileMapLayer")
+
+[node name="TileMapLayer" type="TileMapLayer" parent="."]
+tile_set = SubResource("TileSet_1ffaq")
+
+[node name="TileMapLayer2" type="TileMapLayer" parent="."]
+tile_set = SubResource("TileSet_0hdbv")

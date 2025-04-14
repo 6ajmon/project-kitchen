@@ -1,0 +1,24 @@
+[gd_scene load_steps=4 format=3 uid="uid://dvwcfdaqiiftf"]
+
+[ext_resource type="PackedScene" uid="uid://d3v2h3qmi1hxb" path="res://Components/Player/Player.tscn" id="6_yep12"]
+[ext_resource type="Script" uid="uid://bgc73tmywsk75" path="res://Components/UI/Camera.cs" id="8_c6l14"]
+[ext_resource type="PackedScene" uid="uid://btrd82av6j5pk" path="res://Components/Dungeon/DungeonGenerator.tscn" id="8_ynnps"]
+
+[node name="Level" type="Node2D"]
+
+[node name="Player" parent="." instance=ExtResource("6_yep12")]
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(0, -1)
+zoom = Vector2(0.001, 0.001)
+script = ExtResource("8_c6l14")
+speed = 5000.0
+zoomSpeed = 0.05
+minZoom = 0.001
+
+[node name="DungeonGenerator" parent="." instance=ExtResource("8_ynnps")]
+CellSpawnRadius = 36.0
+MinRoomWidth = 8.0
+MinRoomHeight = 8.0
+EnableVisualization = false
+VisualizationStepDelay = 0.05
