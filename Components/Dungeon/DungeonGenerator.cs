@@ -7,7 +7,7 @@ public partial class DungeonGenerator : Node2D
     [Export] public int NumberOfCells = 150;
     [Export] public float CellSpawnRadius = 20.0f;
     [Export] public float LargestRoomsPercent = 0.3f;
-    [Export] public float LoopPercent = 0.15f;
+    [Export] public float LoopPercent = 0.125f;
     [Export] public int TileSize = 16;
     
     [Export] public TileMapLayer FloorLayer;
@@ -15,6 +15,7 @@ public partial class DungeonGenerator : Node2D
     
     [Export] public bool EnableVisualization = true;
     [Export] public float VisualizationStepDelay = 0.5f;
+    [Export] public float PhysicsTimeScale = 0.1f; // Slower physics simulation for better visualization
     
     private RandomNumberGenerator _rng = new RandomNumberGenerator();
     private List<Rect2I> _cells = new List<Rect2I>();
@@ -85,6 +86,7 @@ public partial class DungeonGenerator : Node2D
         // Initialize room separator
         _roomSeparator = GetNode<RoomSeparator>("RoomSeparator");
         _roomSeparator.TileSize = TileSize;
+        _roomSeparator.PhysicsTimeScale = PhysicsTimeScale; // Set slower physics simulation
         
         // Initialize room determinator
         _roomDeterminator = GetNode<MainRoomDeterminator>("MainRoomDeterminator");
@@ -140,25 +142,25 @@ public partial class DungeonGenerator : Node2D
                     _visualizer.VisualizeAllCells(_cells);
                     _currentState = GenerationState.SeparatingCells;
                     _currentVisualizationStep = 0;
-                    _maxVisualizationSteps = 100; // Number of separation iterations
-                    GD.Print("Cells generated. Starting separation...");
+                    
+                    // Use physics-based separation
+                    var task = _roomSeparator.SeparateCellsWithPhysics(_cells);
+                    task.ContinueWith(t => 
+                    {
+                        _cells = t.Result;
+                        // Signal that separation is complete
+                        CallDeferred("_OnSeparationComplete");
+                    });
+                    
+                    GD.Print("Cells generated. Starting physics-based separation...");
                 }
                 break;
                 
             case GenerationState.SeparatingCells:
-                if (_currentVisualizationStep < _maxVisualizationSteps)
-                {
-                    _cells = _roomSeparator.SeparateCellsStep(_cells);
-                    _visualizer.VisualizeAllCells(_cells);
-                    _currentVisualizationStep++;
-                    GD.Print($"Separation: step {_currentVisualizationStep}/{_maxVisualizationSteps}");
-                }
-                else
-                {
-                    _currentState = GenerationState.DeterminingRooms;
-                    _currentVisualizationStep = 0;
-                    GD.Print("Separation complete. Determining rooms...");
-                }
+                // No iteration needed - physics engine is handling it
+                // Update visualization every frame for smooth animation
+                _visualizer.VisualizeAllCells(_roomSeparator.GetCurrentPositions());
+                _currentVisualizationStep++;
                 break;
                 
             case GenerationState.DeterminingRooms:
@@ -220,6 +222,15 @@ public partial class DungeonGenerator : Node2D
                 }
                 break;
         }
+    }
+    
+    // Called when physics-based separation is complete
+    private void _OnSeparationComplete()
+    {
+        _visualizer.VisualizeAllCells(_cells);
+        _currentState = GenerationState.DeterminingRooms;
+        _currentVisualizationStep = 0;
+        GD.Print("Physics-based separation complete. Determining rooms...");
     }
     
     private void GenerateDungeon()

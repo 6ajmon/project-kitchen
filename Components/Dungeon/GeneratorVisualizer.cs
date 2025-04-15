@@ -14,6 +14,9 @@ public partial class GeneratorVisualizer : Node2D
     private Node2D _loopsVisContainer;
     private Node2D _corridorsVisContainer;
     
+    // Store previous positions to show movement
+    private List<Rect2I> _previousCellPositions = new List<Rect2I>();
+    
     public override void _Ready()
     {
         InitializeContainers();
@@ -55,38 +58,57 @@ public partial class GeneratorVisualizer : Node2D
         }
         
         // Add new rectangles representing cells
-        foreach (Rect2I cell in cells)
+        for (int i = 0; i < cells.Count; i++)
         {
+            Rect2I cell = cells[i];
+            
+            // Create the cell rectangle
             ColorRect rect = new ColorRect();
             rect.Position = new Vector2(cell.Position.X, cell.Position.Y);
             rect.Size = new Vector2(cell.Size.X, cell.Size.Y);
             rect.Color = new Color(0.5f, 0.5f, 0.8f, 0.5f);
             _cellsVisContainer.AddChild(rect);
             
-            // Add grid for tile visualization inside the cell
-            for (int x = 0; x < cell.Size.X; x += TileSize)
+            // Add velocity indicator if we have previous positions
+            if (_previousCellPositions.Count == cells.Count)
             {
-                for (int y = 0; y < cell.Size.Y; y += TileSize)
+                Rect2I prevCell = _previousCellPositions[i];
+                Vector2 prevCenter = new Vector2(
+                    prevCell.Position.X + prevCell.Size.X / 2,
+                    prevCell.Position.Y + prevCell.Size.Y / 2
+                );
+                
+                Vector2 currentCenter = new Vector2(
+                    cell.Position.X + cell.Size.X / 2,
+                    cell.Position.Y + cell.Size.Y / 2
+                );
+                
+                // Only draw movement indicator if there's significant movement
+                if (prevCenter.DistanceSquaredTo(currentCenter) > 4)
                 {
-                    Line2D gridLine = new Line2D();
-                    gridLine.Width = 1.0f;
-                    gridLine.DefaultColor = new Color(0.7f, 0.7f, 0.7f, 0.3f);
-                    
-                    // Horizontal lines
-                    gridLine.AddPoint(new Vector2(cell.Position.X, cell.Position.Y + y));
-                    gridLine.AddPoint(new Vector2(cell.Position.X + cell.Size.X, cell.Position.Y + y));
-                    _cellsVisContainer.AddChild(gridLine);
-                    
-                    // Vertical lines
-                    Line2D vLine = new Line2D();
-                    vLine.Width = 1.0f;
-                    vLine.DefaultColor = new Color(0.7f, 0.7f, 0.7f, 0.3f);
-                    vLine.AddPoint(new Vector2(cell.Position.X + x, cell.Position.Y));
-                    vLine.AddPoint(new Vector2(cell.Position.X + x, cell.Position.Y + cell.Size.Y));
-                    _cellsVisContainer.AddChild(vLine);
+                    Line2D velocityLine = new Line2D();
+                    velocityLine.Width = 2.0f;
+                    velocityLine.DefaultColor = new Color(1, 0, 0, 0.7f); // Red for movement
+                    velocityLine.AddPoint(currentCenter);
+                    velocityLine.AddPoint(prevCenter);
+                    _cellsVisContainer.AddChild(velocityLine);
                 }
             }
+            
+            // Add outline
+            Line2D outlineRect = new Line2D();
+            outlineRect.Width = 1.0f;
+            outlineRect.DefaultColor = new Color(0.7f, 0.7f, 0.7f, 0.3f);
+            outlineRect.AddPoint(new Vector2(cell.Position.X, cell.Position.Y));
+            outlineRect.AddPoint(new Vector2(cell.Position.X + cell.Size.X, cell.Position.Y));
+            outlineRect.AddPoint(new Vector2(cell.Position.X + cell.Size.X, cell.Position.Y + cell.Size.Y));
+            outlineRect.AddPoint(new Vector2(cell.Position.X, cell.Position.Y + cell.Size.Y));
+            outlineRect.AddPoint(new Vector2(cell.Position.X, cell.Position.Y));
+            _cellsVisContainer.AddChild(outlineRect);
         }
+        
+        // Store current positions as previous for next update
+        _previousCellPositions = new List<Rect2I>(cells);
     }
     
     public void VisualizeRooms(List<Rect2I> rooms, List<Vector2I> roomCenters)
