@@ -17,8 +17,4 @@ zoomSpeed = 0.05
 minZoom = 0.001
 
 [node name="DungeonGenerator" parent="." instance=ExtResource("8_ynnps")]
-CellSpawnRadius = 36.0
-MinRoomWidth = 8.0
-MinRoomHeight = 8.0
-EnableVisualization = false
 VisualizationStepDelay = 0.05
