@@ -17,7 +17,7 @@ public partial class GraphGenerator : Node2D
         _rng.Randomize();
     }
     
-    public List<(int, int)> GenerateDelaunayTriangulation(List<Vector2> points)
+    public List<(int, int)> GenerateDelaunayTriangulation(List<Vector2I> points)
     {
         if (points.Count < 2) return new List<(int, int)>();
         
@@ -28,7 +28,8 @@ public partial class GraphGenerator : Node2D
         {
             for (int j = i + 1; j < points.Count; j++)
             {
-                float distance = points[i].DistanceTo(points[j]);
+                // Use Vector2.DistanceTo by converting Vector2I to Vector2 for the distance calculation
+                float distance = new Vector2(points[i].X, points[i].Y).DistanceTo(new Vector2(points[j].X, points[j].Y));
                 _allEdges.Add((i, j, distance));
             }
         }
@@ -40,7 +41,7 @@ public partial class GraphGenerator : Node2D
         return _allEdges.Select(e => (e.Item1, e.Item2)).ToList();
     }
     
-    public List<(int, int)> GenerateMinimalSpanningTree(List<Vector2> points)
+    public List<(int, int)> GenerateMinimalSpanningTree(List<Vector2I> points)
     {
         if (points.Count < 2) return new List<(int, int)>();
         
@@ -79,8 +80,20 @@ public partial class GraphGenerator : Node2D
         
         foreach (var edge in _allEdges)
         {
-            if (!_mstEdges.Contains((edge.Item1, edge.Item2)) && 
-                !_mstEdges.Contains((edge.Item2, edge.Item1)))
+            bool inMst = false;
+            
+            // Check if edge is in MST (in either direction)
+            foreach (var mstEdge in _mstEdges)
+            {
+                if ((edge.Item1 == mstEdge.Item1 && edge.Item2 == mstEdge.Item2) ||
+                    (edge.Item1 == mstEdge.Item2 && edge.Item2 == mstEdge.Item1))
+                {
+                    inMst = true;
+                    break;
+                }
+            }
+            
+            if (!inMst)
             {
                 remainingEdges.Add((edge.Item1, edge.Item2));
             }

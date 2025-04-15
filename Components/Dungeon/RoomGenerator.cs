@@ -15,47 +15,35 @@ public partial class RoomGenerator : Node2D
         _rng.Randomize();
     }
     
-    public List<Rect2> GenerateCells()
+    public List<Rect2I> GenerateCells()
     {
-        List<Rect2> cells = new List<Rect2>();
+        List<Rect2I> cells = new List<Rect2I>();
         
         for (int i = 0; i < NumberOfCells; i++)
         {
-            // Generate sizes in tile units
-            float widthInTiles = NormalRandom(2, 12);  // From 2 to 12 tiles wide
-            float heightInTiles = NormalRandom(2, 12); // From 2 to 12 tiles high
+            // Generate sizes in tile units (integer values)
+            int widthInTiles = _rng.RandiRange(3, 12);  // From 3 to 12 tiles wide
+            int heightInTiles = _rng.RandiRange(3, 12); // From 3 to 12 tiles high
             
-            // Ensure width/height ratio is reasonable
-            // if (widthInTiles / heightInTiles > 2.5f) heightInTiles = widthInTiles / 2.0f;
-            // if (heightInTiles / widthInTiles > 2.5f) widthInTiles = heightInTiles / 2.0f;
+            // Convert sizes to pixels (aligned to grid)
+            int width = widthInTiles * TileSize;
+            int height = heightInTiles * TileSize;
             
-            // Convert sizes to pixels
-            float width = widthInTiles * TileSize;
-            float height = heightInTiles * TileSize;
-            
-            // Generate random position within radius (also in tile units)
+            // Generate random position within radius
             float angle = _rng.RandfRange(0, Mathf.Pi * 2);
             float distance = _rng.RandfRange(0, CellSpawnRadius);
-            Vector2 position = new Vector2(
-                Mathf.Cos(angle) * distance * TileSize,
-                Mathf.Sin(angle) * distance * TileSize
-            );
             
-            cells.Add(new Rect2(position.X, position.Y, width, height));
+            // Calculate position in tile coordinates
+            int tileX = Mathf.FloorToInt(Mathf.Cos(angle) * distance);
+            int tileY = Mathf.FloorToInt(Mathf.Sin(angle) * distance);
+            
+            // Convert to pixel coordinates
+            int pixelX = tileX * TileSize;
+            int pixelY = tileY * TileSize;
+            
+            cells.Add(new Rect2I(pixelX, pixelY, width, height));
         }
         
         return cells;
-    }
-    
-    private float NormalRandom(float min, float max)
-    {
-        // Simple approximation of Park-Miller normal distribution
-        float sum = 0;
-        for (int i = 0; i < 3; i++) // More iterations = more normal
-        {
-            sum += _rng.RandfRange(min, max);
-        }
-        
-        return sum / 3.0f;
     }
 }

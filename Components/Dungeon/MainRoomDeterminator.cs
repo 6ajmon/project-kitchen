@@ -4,13 +4,14 @@ using System.Collections.Generic;
 using System.Linq;
 
 public partial class MainRoomDeterminator : Node2D
-{    [Export] public int TileSize = 16;
+{
+    [Export] public int TileSize = 16;
     [Export] public float LargestRoomsPercent = 0.3f;  // 30% największych pokoi
     
-    public (List<Rect2>, List<Vector2>) DetermineRooms(List<Rect2> cells)
+    public (List<Rect2I>, List<Vector2I>) DetermineRooms(List<Rect2I> cells)
     {
-        List<Rect2> rooms = new List<Rect2>();
-        List<Vector2> roomCenters = new List<Vector2>();
+        List<Rect2I> rooms = new List<Rect2I>();
+        List<Vector2I> roomCenters = new List<Vector2I>();
         
         if (cells.Count == 0)
             return (rooms, roomCenters);
@@ -27,9 +28,9 @@ public partial class MainRoomDeterminator : Node2D
         // Wybór najlepszych pokoi
         for (int i = 0; i < roomCount && i < sortedCells.Count; i++)
         {
-            Rect2 room = sortedCells[i].Cell;
+            Rect2I room = sortedCells[i].Cell;
             rooms.Add(room);
-            roomCenters.Add(room.GetCenter());
+            roomCenters.Add(room.Position + room.Size / 2);
         }
         
         GD.Print($"Selected {rooms.Count} rooms out of {cells.Count} cells ({LargestRoomsPercent*100}%)");

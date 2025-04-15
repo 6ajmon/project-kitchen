@@ -17,9 +17,9 @@ public partial class DungeonGenerator : Node2D
     [Export] public float VisualizationStepDelay = 0.5f;
     
     private RandomNumberGenerator _rng = new RandomNumberGenerator();
-    private List<Rect2> _cells = new List<Rect2>();
-    private List<Rect2> _rooms = new List<Rect2>();
-    private List<Vector2> _roomCenters = new List<Vector2>();
+    private List<Rect2I> _cells = new List<Rect2I>();
+    private List<Rect2I> _rooms = new List<Rect2I>();
+    private List<Vector2I> _roomCenters = new List<Vector2I>();
     private List<(int, int)> _corridorEdges = new List<(int, int)>();
     
     // Child nodes
@@ -84,8 +84,9 @@ public partial class DungeonGenerator : Node2D
         
         // Initialize room separator
         _roomSeparator = GetNode<RoomSeparator>("RoomSeparator");
+        _roomSeparator.TileSize = TileSize;
         
-        // Initialize room determinator (z zaktualizowanymi parametrami)
+        // Initialize room determinator
         _roomDeterminator = GetNode<MainRoomDeterminator>("MainRoomDeterminator");
         _roomDeterminator.TileSize = TileSize;
         _roomDeterminator.LargestRoomsPercent = LargestRoomsPercent;
@@ -95,7 +96,8 @@ public partial class DungeonGenerator : Node2D
         _graphGenerator.LoopPercent = LoopPercent;
         
         // Initialize hallway generator
-        _hallwayGenerator = GetNode<HallwayGenerator>("HallwayGenerator");
+        _hallwayGenerator = GetNode<HallwayGenerator>("HallwayGenerator"); 
+        _hallwayGenerator.TileSize = TileSize;
         
         // Initialize visualizer if needed
         if (EnableVisualization)
@@ -247,17 +249,17 @@ public partial class DungeonGenerator : Node2D
         WallLayer.Clear();
         
         // First place floor tiles for rooms and corridors
-        foreach (Rect2 room in _rooms)
+        foreach (Rect2I room in _rooms)
         {
             // Convert room coordinates to tile coordinates
             Vector2I topLeft = new Vector2I(
-                Mathf.FloorToInt(room.Position.X / TileSize),
-                Mathf.FloorToInt(room.Position.Y / TileSize)
+                room.Position.X / TileSize,
+                room.Position.Y / TileSize
             );
             
             Vector2I bottomRight = new Vector2I(
-                Mathf.CeilToInt(room.End.X / TileSize),
-                Mathf.CeilToInt(room.End.Y / TileSize)
+                (room.Position.X + room.Size.X) / TileSize,
+                (room.Position.Y + room.Size.Y) / TileSize
             );
             
             // Place floor tiles

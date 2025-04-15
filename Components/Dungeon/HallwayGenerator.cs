@@ -4,6 +4,7 @@ using System.Collections.Generic;
 
 public partial class HallwayGenerator : Node2D
 {
+    [Export] public int TileSize = 16;
     private RandomNumberGenerator _rng = new RandomNumberGenerator();
     
     public override void _Ready()
@@ -11,14 +12,14 @@ public partial class HallwayGenerator : Node2D
         _rng.Randomize();
     }
     
-    public List<Rect2> CreateCorridors(List<Rect2> cells, List<Rect2> rooms, List<Vector2> roomCenters, List<(int, int)> corridorEdges)
+    public List<Rect2I> CreateCorridors(List<Rect2I> cells, List<Rect2I> rooms, List<Vector2I> roomCenters, List<(int, int)> corridorEdges)
     {
-        List<Rect2> result = new List<Rect2>(rooms);
+        List<Rect2I> result = new List<Rect2I>(rooms);
         
         foreach (var edge in corridorEdges)
         {
-            Vector2 start = roomCenters[edge.Item1];
-            Vector2 end = roomCenters[edge.Item2];
+            Vector2I start = SnapToGrid(roomCenters[edge.Item1]);
+            Vector2I end = SnapToGrid(roomCenters[edge.Item2]);
             
             // Determine whether to create an L-shaped corridor or straight line
             bool useLShape = _rng.Randf() > 0.5f;
@@ -26,17 +27,17 @@ public partial class HallwayGenerator : Node2D
             if (useLShape)
             {
                 // Create L-shaped corridor
-                Vector2 corner;
+                Vector2I corner;
                 
                 if (_rng.Randf() > 0.5f)
                 {
                     // Horizontal then vertical
-                    corner = new Vector2(end.X, start.Y);
+                    corner = new Vector2I(end.X, start.Y);
                 }
                 else
                 {
                     // Vertical then horizontal
-                    corner = new Vector2(start.X, end.Y);
+                    corner = new Vector2I(start.X, end.Y);
                 }
                 
                 // Apply corridor for both segments
@@ -53,12 +54,20 @@ public partial class HallwayGenerator : Node2D
         return result;
     }
     
-    private List<Rect2> ApplyCorridorBetweenPoints(List<Rect2> cells, List<Rect2> rooms, Vector2 start, Vector2 end)
+    private Vector2I SnapToGrid(Vector2I position)
     {
-        List<Rect2> result = new List<Rect2>(rooms);
+        return new Vector2I(
+            (position.X / TileSize) * TileSize,
+            (position.Y / TileSize) * TileSize
+        );
+    }
+    
+    private List<Rect2I> ApplyCorridorBetweenPoints(List<Rect2I> cells, List<Rect2I> rooms, Vector2I start, Vector2I end)
+    {
+        List<Rect2I> result = new List<Rect2I>(rooms);
         
         // Find all cells that intersect with this corridor line
-        foreach (Rect2 cell in cells)
+        foreach (Rect2I cell in cells)
         {
             if (rooms.Contains(cell)) continue; // Skip rooms
             
@@ -66,34 +75,40 @@ public partial class HallwayGenerator : Node2D
             if (LineIntersectsRect(start, end, cell))
             {
                 // Mark this cell as a corridor
-                result.Add(cell); // For rendering purposes
+                result.Add(cell);
             }
         }
         
         return result;
     }
     
-    private bool LineIntersectsRect(Vector2 lineStart, Vector2 lineEnd, Rect2 rect)
+    private bool LineIntersectsRect(Vector2I lineStart, Vector2I lineEnd, Rect2I rect)
     {
-        // Simple check: does the line intersect any of the 4 sides of the rectangle?
+        // Convert to float to use line segment intersection logic
+        Vector2 start = new Vector2(lineStart.X, lineStart.Y);
+        Vector2 end = new Vector2(lineEnd.X, lineEnd.Y);
+        
+        // Get rectangle corners
         Vector2[] rectCorners = {
-            rect.Position,
-            new Vector2(rect.End.X, rect.Position.Y),
-            rect.End,
-            new Vector2(rect.Position.X, rect.End.Y)
+            new Vector2(rect.Position.X, rect.Position.Y),
+            new Vector2(rect.Position.X + rect.Size.X, rect.Position.Y),
+            new Vector2(rect.Position.X + rect.Size.X, rect.Position.Y + rect.Size.Y),
+            new Vector2(rect.Position.X, rect.Position.Y + rect.Size.Y)
         };
         
+        // Check if line intersects any of the rectangle sides
         for (int i = 0; i < 4; i++)
         {
             int next = (i + 1) % 4;
-            if (LineSegmentsIntersect(lineStart, lineEnd, rectCorners[i], rectCorners[next]))
+            if (LineSegmentsIntersect(start, end, rectCorners[i], rectCorners[next]))
             {
                 return true;
             }
         }
         
         // Also check if either endpoint is inside the rectangle
-        if (rect.HasPoint(lineStart) || rect.HasPoint(lineEnd))
+        Rect2 floatRect = new Rect2(rect.Position.X, rect.Position.Y, rect.Size.X, rect.Size.Y);
+        if (floatRect.HasPoint(start) || floatRect.HasPoint(end))
         {
             return true;
         }
