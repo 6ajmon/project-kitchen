@@ -156,16 +156,33 @@ public partial class GeneratorVisualizer : Node2D
             child.QueueFree();
         }
         
+        if (edges.Count == 0 || roomCenters.Count == 0)
+        {
+            GD.PrintErr("No edges or room centers to visualize in Delaunay triangulation");
+            return;
+        }
+        
         // Add lines for each Delaunay edge
+        int validEdges = 0;
         foreach (var edge in edges)
         {
+            if (edge.Item1 < 0 || edge.Item1 >= roomCenters.Count || 
+                edge.Item2 < 0 || edge.Item2 >= roomCenters.Count)
+            {
+                GD.PrintErr($"Invalid edge index ({edge.Item1}, {edge.Item2}) for room centers count {roomCenters.Count}");
+                continue;
+            }
+            
             Line2D line = new Line2D();
             line.Width = 2.0f;
             line.DefaultColor = new Color(0.2f, 0.6f, 0.8f, 0.5f);
             line.AddPoint(new Vector2(roomCenters[edge.Item1].X, roomCenters[edge.Item1].Y));
             line.AddPoint(new Vector2(roomCenters[edge.Item2].X, roomCenters[edge.Item2].Y));
             _delaunayVisContainer.AddChild(line);
+            validEdges++;
         }
+        
+        GD.Print($"Visualized {validEdges} Delaunay edges");
     }
     
     public void VisualizeMinimalSpanningTree(List<Vector2I> roomCenters, List<(int, int)> mstEdges)
@@ -176,16 +193,33 @@ public partial class GeneratorVisualizer : Node2D
             child.QueueFree();
         }
         
+        if (mstEdges.Count == 0 || roomCenters.Count == 0)
+        {
+            GD.PrintErr("No edges or room centers to visualize in MST");
+            return;
+        }
+        
         // Add lines for each MST edge (thicker than Delaunay)
+        int validEdges = 0;
         foreach (var edge in mstEdges)
         {
+            if (edge.Item1 < 0 || edge.Item1 >= roomCenters.Count || 
+                edge.Item2 < 0 || edge.Item2 >= roomCenters.Count)
+            {
+                GD.PrintErr($"Invalid edge index ({edge.Item1}, {edge.Item2}) for room centers count {roomCenters.Count}");
+                continue;
+            }
+            
             Line2D line = new Line2D();
             line.Width = 4.0f;
             line.DefaultColor = new Color(0.2f, 0.8f, 0.4f, 0.7f);
             line.AddPoint(new Vector2(roomCenters[edge.Item1].X, roomCenters[edge.Item1].Y));
             line.AddPoint(new Vector2(roomCenters[edge.Item2].X, roomCenters[edge.Item2].Y));
             _mstVisContainer.AddChild(line);
+            validEdges++;
         }
+        
+        GD.Print($"Visualized {validEdges} MST edges");
     }
     
     public void VisualizeLoops(List<Vector2I> roomCenters, List<(int, int)> corridorEdges)
@@ -196,17 +230,32 @@ public partial class GeneratorVisualizer : Node2D
             child.QueueFree();
         }
         
+        if (corridorEdges.Count == 0 || roomCenters.Count == 0)
+        {
+            GD.PrintErr("No edges or room centers to visualize in loops");
+            return;
+        }
+        
         // Add lines for each corridor edge (if not in MST, it's a loop)
+        int loopEdges = 0;
         foreach (var edge in corridorEdges)
         {
+            if (edge.Item1 < 0 || edge.Item1 >= roomCenters.Count || 
+                edge.Item2 < 0 || edge.Item2 >= roomCenters.Count)
+            {
+                GD.PrintErr($"Invalid edge index ({edge.Item1}, {edge.Item2}) for room centers count {roomCenters.Count}");
+                continue;
+            }
+            
             // Skip if the edge is already in the MST container
             bool isInMst = false;
             foreach (Line2D mstLine in _mstVisContainer.GetChildren())
             {
-                if ((mstLine.Points[0] == new Vector2(roomCenters[edge.Item1].X, roomCenters[edge.Item1].Y) &&
+                if ((mstLine.Points.Length >= 2) && 
+                    ((mstLine.Points[0] == new Vector2(roomCenters[edge.Item1].X, roomCenters[edge.Item1].Y) &&
                      mstLine.Points[1] == new Vector2(roomCenters[edge.Item2].X, roomCenters[edge.Item2].Y)) ||
                     (mstLine.Points[0] == new Vector2(roomCenters[edge.Item2].X, roomCenters[edge.Item2].Y) &&
-                     mstLine.Points[1] == new Vector2(roomCenters[edge.Item1].X, roomCenters[edge.Item1].Y)))
+                     mstLine.Points[1] == new Vector2(roomCenters[edge.Item1].X, roomCenters[edge.Item1].Y))))
                 {
                     isInMst = true;
                     break;
@@ -221,8 +270,11 @@ public partial class GeneratorVisualizer : Node2D
                 line.AddPoint(new Vector2(roomCenters[edge.Item1].X, roomCenters[edge.Item1].Y));
                 line.AddPoint(new Vector2(roomCenters[edge.Item2].X, roomCenters[edge.Item2].Y));
                 _loopsVisContainer.AddChild(line);
+                loopEdges++;
             }
         }
+        
+        GD.Print($"Visualized {loopEdges} loop edges");
     }
     
     public void VisualizeCorridors(List<Rect2I> cells, List<Rect2I> rooms, List<Vector2I> roomCenters)

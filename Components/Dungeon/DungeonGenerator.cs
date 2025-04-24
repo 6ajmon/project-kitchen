@@ -7,7 +7,7 @@ public partial class DungeonGenerator : Node2D
     [Export] public int NumberOfCells = 150;
     [Export] public float CellSpawnRadius = 20.0f;
     [Export] public float LargestRoomsPercent = 0.3f;
-    [Export] public float LoopPercent = 0.125f;
+    [Export] public float LoopPercent = 0.1f; // Changed from 0.125f to 0.1f
     [Export] public int TileSize = 16;
     
     [Export] public TileMapLayer FloorLayer;
@@ -95,7 +95,7 @@ public partial class DungeonGenerator : Node2D
         
         // Initialize graph generator
         _graphGenerator = GetNode<GraphGenerator>("GraphGenerator");
-        _graphGenerator.LoopPercent = LoopPercent;
+        _graphGenerator.LoopPercent = LoopPercent; // Pass the loop percentage from the main generator
         
         // Initialize hallway generator
         _hallwayGenerator = GetNode<HallwayGenerator>("HallwayGenerator"); 
@@ -178,7 +178,23 @@ public partial class DungeonGenerator : Node2D
                 if (_currentVisualizationStep == 0)
                 {
                     // Delaunay triangulation
+                    if (_roomCenters.Count < 2)
+                    {
+                        GD.PrintErr("Not enough room centers for triangulation. Need at least 2 rooms.");
+                        _currentState = GenerationState.RenderingDungeon;
+                        break;
+                    }
+                    
                     var delaunayEdges = _graphGenerator.GenerateDelaunayTriangulation(_roomCenters);
+                    if (delaunayEdges.Count == 0)
+                    {
+                        GD.PrintErr("Delaunay triangulation returned no edges.");
+                    }
+                    else
+                    {
+                        GD.Print($"Generated {delaunayEdges.Count} Delaunay edges for {_roomCenters.Count} rooms");
+                    }
+                    
                     _visualizer.VisualizeDelaunayTriangulation(_roomCenters, delaunayEdges);
                     _currentVisualizationStep++;
                     GD.Print("Delaunay triangulation complete. Creating MST...");
@@ -187,6 +203,11 @@ public partial class DungeonGenerator : Node2D
                 {
                     // MST
                     var mstEdges = _graphGenerator.GenerateMinimalSpanningTree(_roomCenters);
+                    if (mstEdges.Count == 0)
+                    {
+                        GD.PrintErr("MST generation returned no edges.");
+                    }
+                    
                     _visualizer.VisualizeMinimalSpanningTree(_roomCenters, mstEdges);
                     _currentVisualizationStep++;
                     GD.Print("MST created. Adding loops...");
@@ -195,10 +216,18 @@ public partial class DungeonGenerator : Node2D
                 {
                     // Additional loops
                     _corridorEdges = _graphGenerator.AddLoops();
+                    
+                    // Ensure we have at least the MST edges
+                    if (_corridorEdges.Count == 0)
+                    {
+                        GD.PrintErr("No corridor edges generated. Using MST as fallback.");
+                        _corridorEdges = _graphGenerator.GetMSTEdges();
+                    }
+                    
                     _visualizer.VisualizeLoops(_roomCenters, _corridorEdges);
                     _currentState = GenerationState.CreatingCorridors;
                     _currentVisualizationStep = 0;
-                    GD.Print("Additional connections added. Creating corridors...");
+                    GD.Print($"Added loops. Total corridor edges: {_corridorEdges.Count}");
                 }
                 break;
                 
@@ -244,10 +273,23 @@ public partial class DungeonGenerator : Node2D
         // Step 3: Determine which cells are rooms
         (_rooms, _roomCenters) = _roomDeterminator.DetermineRooms(_cells);
         
+        if (_roomCenters.Count < 2)
+        {
+            GD.PrintErr("Not enough rooms generated. Dungeon generation cannot continue.");
+            return;
+        }
+        
         // Step 4: Connect rooms using Delaunay, MST, and adding loops
-        _graphGenerator.GenerateDelaunayTriangulation(_roomCenters);
-        _graphGenerator.GenerateMinimalSpanningTree(_roomCenters);
+        var delaunayEdges = _graphGenerator.GenerateDelaunayTriangulation(_roomCenters);
+        var mstEdges = _graphGenerator.GenerateMinimalSpanningTree(_roomCenters);
         _corridorEdges = _graphGenerator.AddLoops();
+        
+        // Ensure we have at least the MST edges
+        if (_corridorEdges.Count == 0)
+        {
+            GD.PrintErr("No corridor edges generated. Using MST as fallback.");
+            _corridorEdges = mstEdges;
+        }
         
         // Step 5: Create corridors between connected rooms
         _rooms = _hallwayGenerator.CreateCorridors(_cells, _rooms, _roomCenters, _corridorEdges);

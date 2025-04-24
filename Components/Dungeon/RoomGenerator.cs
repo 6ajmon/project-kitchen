@@ -22,8 +22,8 @@ public partial class RoomGenerator : Node2D
         for (int i = 0; i < NumberOfCells; i++)
         {
             // Generate sizes in tile units (integer values)
-            int widthInTiles = _rng.RandiRange(3, 12);  // From 3 to 12 tiles wide
-            int heightInTiles = _rng.RandiRange(3, 12); // From 3 to 12 tiles high
+            int widthInTiles = _rng.RandiRange(5, 13);
+            int heightInTiles = _rng.RandiRange(5, 13);
             
             // Convert sizes to pixels (aligned to grid)
             int width = widthInTiles * TileSize;
