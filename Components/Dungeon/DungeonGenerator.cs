@@ -238,8 +238,8 @@ public partial class DungeonGenerator : Node2D
         // Step 1: Generate random cells
         _cells = _roomGenerator.GenerateCells();
         
-        // Step 2: Separate cells using steering behavior
-        _cells = _roomSeparator.SeparateCells(_cells, 100); // Run 100 iterations of separation
+        // Step 2: Separate cells using iterative method instead of physics when visualization is disabled
+        _cells = _roomSeparator.SeparateCellsStep(_cells, 100); // Use step-based separation instead of physics
         
         // Step 3: Determine which cells are rooms
         (_rooms, _roomCenters) = _roomDeterminator.DetermineRooms(_cells);
