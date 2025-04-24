@@ -19,7 +19,6 @@ sources/0 = SubResource("TileSetAtlasSource_xht7t")
 
 [node name="DungeonGenerator" type="Node2D" node_paths=PackedStringArray("FloorLayer", "WallLayer")]
 script = ExtResource("1_s7lx6")
-LargestRoomsPercent = 0.1
 FloorLayer = NodePath("TileMapLayer2")
 WallLayer = NodePath("TileMapLayer2")
 
@@ -40,7 +39,6 @@ script = ExtResource("6_qeo6l")
 
 [node name="ExtraRoomDeterminator" type="Node2D" parent="."]
 script = ExtResource("7_xht7t")
-LargestExtraRoomsPercent = 1.0
 
 [node name="GeneratorVisualizer" type="Node2D" parent="."]
 script = ExtResource("7_frg7a")

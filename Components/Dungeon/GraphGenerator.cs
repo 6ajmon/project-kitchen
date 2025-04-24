@@ -337,10 +337,11 @@ public partial class GraphGenerator : Node2D
             return new List<(int, int)>();
         }
         
+        // Ensure we have edges to work with
         if (_allEdges.Count == 0)
         {
-            GD.PrintErr("No edges available for MST generation. Creating backup edges.");
-            // Create a complete graph as backup
+            GD.Print("No edges available for MST generation. Creating complete graph as backup.");
+            // Create a complete graph as backup (connect every point to every other point)
             for (int i = 0; i < points.Count; i++)
             {
                 for (int j = i + 1; j < points.Count; j++)
@@ -357,7 +358,7 @@ public partial class GraphGenerator : Node2D
         _mstEdges.Clear();
         int[] parent = new int[points.Count];
         
-        // Initialize parents
+        // Initialize disjoint-set data structure
         for (int i = 0; i < parent.Length; i++)
         {
             parent[i] = i;
@@ -383,65 +384,121 @@ public partial class GraphGenerator : Node2D
             }
         }
         
-        // Ensure we have enough connections (at least points.Count-1)
-        if (_mstEdges.Count < points.Count - 1 && points.Count >= 2)
+        // We should have exactly (n-1) edges for n points in a valid MST
+        int expectedEdges = points.Count - 1;
+        
+        // If MST is incomplete, ensure full connectivity with a fallback approach
+        if (_mstEdges.Count < expectedEdges)
         {
-            GD.PrintErr($"MST incomplete. Only {_mstEdges.Count} edges for {points.Count} points (expected {points.Count-1})");
+            GD.PrintErr($"MST incomplete. Only {_mstEdges.Count} edges for {points.Count} points (expected {expectedEdges})");
+            GD.Print("Using fallback approach to ensure full connectivity...");
             
-            // If MST is incomplete, ensure at least a minimum spanning path
-            bool[] connected = new bool[points.Count];
+            // Create an adjacency list from current MST edges
+            List<int>[] adjacencyList = new List<int>[points.Count];
             for (int i = 0; i < points.Count; i++)
             {
-                connected[i] = false;
+                adjacencyList[i] = new List<int>();
             }
             
-            // Mark points that are already connected
             foreach (var edge in _mstEdges)
             {
-                connected[edge.Item1] = true;
-                connected[edge.Item2] = true;
+                adjacencyList[edge.Item1].Add(edge.Item2);
+                adjacencyList[edge.Item2].Add(edge.Item1);
             }
             
-            // Find unconnected points and connect them to their nearest neighbor
-            for (int i = 0; i < points.Count; i++)
+            // Find connected components using BFS
+            bool[] visited = new bool[points.Count];
+            List<List<int>> components = new List<List<int>>();
+            
+            for (int startVertex = 0; startVertex < points.Count; startVertex++)
             {
-                if (!connected[i])
+                if (!visited[startVertex])
                 {
-                    // Find nearest connected point
-                    int nearest = -1;
-                    float minDist = float.MaxValue;
+                    // Found a new component
+                    List<int> component = new List<int>();
+                    Queue<int> queue = new Queue<int>();
                     
-                    for (int j = 0; j < points.Count; j++)
+                    visited[startVertex] = true;
+                    queue.Enqueue(startVertex);
+                    component.Add(startVertex);
+                    
+                    while (queue.Count > 0)
                     {
-                        if (i != j && connected[j])
+                        int vertex = queue.Dequeue();
+                        
+                        foreach (int neighbor in adjacencyList[vertex])
                         {
-                            float dist = new Vector2(points[i].X, points[i].Y).DistanceTo(new Vector2(points[j].X, points[j].Y));
-                            if (dist < minDist)
+                            if (!visited[neighbor])
                             {
-                                minDist = dist;
-                                nearest = j;
+                                visited[neighbor] = true;
+                                queue.Enqueue(neighbor);
+                                component.Add(neighbor);
                             }
                         }
                     }
                     
-                    // If we found a connected point, connect to it
-                    if (nearest != -1)
+                    components.Add(component);
+                }
+            }
+            
+            GD.Print($"Found {components.Count} disconnected components. Connecting them...");
+            
+            // Connect disconnected components with shortest possible edges
+            while (components.Count > 1)
+            {
+                int bestComponent1 = 0;
+                int bestComponent2 = 1;
+                int bestVertex1 = -1;
+                int bestVertex2 = -1;
+                float minDistance = float.MaxValue;
+                
+                // Find the closest pair of vertices between different components
+                for (int i = 0; i < components.Count; i++)
+                {
+                    for (int j = i + 1; j < components.Count; j++)
                     {
-                        _mstEdges.Add((i, nearest));
-                        connected[i] = true;
+                        foreach (int vertex1 in components[i])
+                        {
+                            foreach (int vertex2 in components[j])
+                            {
+                                float distance = new Vector2(points[vertex1].X, points[vertex1].Y).DistanceTo(
+                                                 new Vector2(points[vertex2].X, points[vertex2].Y));
+                                
+                                if (distance < minDistance)
+                                {
+                                    minDistance = distance;
+                                    bestVertex1 = vertex1;
+                                    bestVertex2 = vertex2;
+                                    bestComponent1 = i;
+                                    bestComponent2 = j;
+                                }
+                            }
+                        }
                     }
-                    else if (points.Count > 0)
-                    {
-                        // If no connected points, connect to point 0
-                        _mstEdges.Add((i, 0));
-                        connected[i] = true;
-                        connected[0] = true; 
-                    }
+                }
+                
+                if (bestVertex1 != -1 && bestVertex2 != -1)
+                {
+                    // Add edge connecting the two closest components
+                    _mstEdges.Add((bestVertex1, bestVertex2));
+                    
+                    // Merge components
+                    components[bestComponent1].AddRange(components[bestComponent2]);
+                    components.RemoveAt(bestComponent2);
+                    
+                    // Update adjacency list
+                    adjacencyList[bestVertex1].Add(bestVertex2);
+                    adjacencyList[bestVertex2].Add(bestVertex1);
+                }
+                else
+                {
+                    GD.PrintErr("Failed to find vertices to connect components. Breaking.");
+                    break;
                 }
             }
         }
         
-        GD.Print($"MST created with {_mstEdges.Count} edges connecting {points.Count} rooms");
+        GD.Print($"Final MST created with {_mstEdges.Count} edges connecting {points.Count} rooms (expected {expectedEdges})");
         return _mstEdges;
     }
     

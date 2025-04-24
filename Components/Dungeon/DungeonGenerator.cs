@@ -7,9 +7,9 @@ public partial class DungeonGenerator : Node2D
     [Export] public int NumberOfCells = 150;
     [Export] public float CellSpawnRadius = 20.0f;
     [Export] public float LargestRoomsPercent = 0.3f;
-    [Export] public float LoopPercent = 0.1f; // Changed from 0.125f to 0.1f
+    [Export] public float LoopPercent = 0.1f;
     [Export] public int TileSize = 16;
-    [Export] public float ExtraRoomsPercent = 0.3f; // 30% largest potential extra rooms
+    [Export] public float ExtraRoomsPercent = 1.0f;
     
     [Export] public TileMapLayer FloorLayer;
     [Export] public TileMapLayer WallLayer;
