@@ -9,6 +9,7 @@ public partial class DungeonGenerator : Node2D
     [Export] public float LargestRoomsPercent = 0.3f;
     [Export] public float LoopPercent = 0.1f; // Changed from 0.125f to 0.1f
     [Export] public int TileSize = 16;
+    [Export] public float ExtraRoomsPercent = 0.3f; // 30% largest potential extra rooms
     
     [Export] public TileMapLayer FloorLayer;
     [Export] public TileMapLayer WallLayer;
@@ -22,6 +23,8 @@ public partial class DungeonGenerator : Node2D
     private List<Rect2I> _rooms = new List<Rect2I>();
     private List<Vector2I> _roomCenters = new List<Vector2I>();
     private List<(int, int)> _corridorEdges = new List<(int, int)>();
+    private List<Rect2I> _extraRooms = new List<Rect2I>();
+    private List<Vector2I> _extraRoomCenters = new List<Vector2I>();
     
     // Child nodes
     private RoomGenerator _roomGenerator;
@@ -30,6 +33,7 @@ public partial class DungeonGenerator : Node2D
     private GraphGenerator _graphGenerator;
     private HallwayGenerator _hallwayGenerator;
     private GeneratorVisualizer _visualizer;
+    private ExtraRoomDeterminator _extraRoomDeterminator;
     
     public enum GenerationState
     {
@@ -39,6 +43,7 @@ public partial class DungeonGenerator : Node2D
         DeterminingRooms,
         ConnectingRooms,
         CreatingCorridors,
+        FindingExtraRooms,
         RenderingDungeon,
         Complete
     }
@@ -100,6 +105,11 @@ public partial class DungeonGenerator : Node2D
         // Initialize hallway generator
         _hallwayGenerator = GetNode<HallwayGenerator>("HallwayGenerator"); 
         _hallwayGenerator.TileSize = TileSize;
+        
+        // Initialize extra room determinator
+        _extraRoomDeterminator = GetNode<ExtraRoomDeterminator>("ExtraRoomDeterminator");
+        _extraRoomDeterminator.TileSize = TileSize;
+        _extraRoomDeterminator.LargestExtraRoomsPercent = ExtraRoomsPercent;
         
         // Initialize visualizer if needed
         if (EnableVisualization)
@@ -236,9 +246,20 @@ public partial class DungeonGenerator : Node2D
                 {
                     _rooms = _hallwayGenerator.CreateCorridors(_cells, _rooms, _roomCenters, _corridorEdges);
                     _visualizer.VisualizeCorridors(_cells, _rooms, _roomCenters);
+                    _currentState = GenerationState.FindingExtraRooms;
+                    _currentVisualizationStep = 0;
+                    GD.Print("Corridors created. Finding potential extra rooms...");
+                }
+                break;
+                
+            case GenerationState.FindingExtraRooms:
+                if (_currentVisualizationStep == 0)
+                {
+                    (_extraRooms, _extraRoomCenters) = _extraRoomDeterminator.DetermineExtraRooms(_cells, _rooms);
+                    _visualizer.VisualizeExtraRooms(_extraRooms, _extraRoomCenters);
                     _currentState = GenerationState.RenderingDungeon;
                     _currentVisualizationStep = 0;
-                    GD.Print("Corridors created. Rendering dungeon...");
+                    GD.Print($"Found {_extraRooms.Count} potential extra rooms. Rendering dungeon...");
                 }
                 break;
                 
@@ -293,6 +314,88 @@ public partial class DungeonGenerator : Node2D
         
         // Step 5: Create corridors between connected rooms
         _rooms = _hallwayGenerator.CreateCorridors(_cells, _rooms, _roomCenters, _corridorEdges);
+        
+        // Step 6: Find potential extra rooms that can be added later
+        (_extraRooms, _extraRoomCenters) = _extraRoomDeterminator.DetermineExtraRooms(_cells, _rooms);
+    }
+    
+    // Method to add an extra room to the dungeon during gameplay
+    public bool AddExtraRoom(int extraRoomIndex)
+    {
+        if (extraRoomIndex < 0 || extraRoomIndex >= _extraRooms.Count)
+        {
+            GD.PrintErr($"Invalid extra room index: {extraRoomIndex}");
+            return false;
+        }
+        
+        // Get the room to add
+        Rect2I roomToAdd = _extraRooms[extraRoomIndex];
+        Vector2I centerToAdd = _extraRoomCenters[extraRoomIndex];
+        
+        // Find closest dungeon room to connect to
+        int closestRoomIndex = FindClosestRoom(centerToAdd);
+        if (closestRoomIndex < 0)
+        {
+            GD.PrintErr("Couldn't find a valid room to connect to");
+            return false;
+        }
+        
+        // Add to main rooms
+        int newRoomIndex = _rooms.Count;
+        _rooms.Add(roomToAdd);
+        _roomCenters.Add(centerToAdd);
+        
+        // Create a corridor from the extra room to the closest dungeon room
+        List<(int, int)> newConnection = new List<(int, int)> { (newRoomIndex, closestRoomIndex) };
+        _rooms = _hallwayGenerator.CreateCorridors(_cells, _rooms, _roomCenters, newConnection);
+        
+        // Remove from extra rooms list
+        _extraRooms.RemoveAt(extraRoomIndex);
+        _extraRoomCenters.RemoveAt(extraRoomIndex);
+        
+        // Update dungeon rendering
+        RenderDungeon();
+        
+        GD.Print($"Added extra room to the dungeon, connected to room {closestRoomIndex}");
+        return true;
+    }
+    
+    private int FindClosestRoom(Vector2I point)
+    {
+        if (_roomCenters.Count == 0)
+            return -1;
+            
+        int closestIndex = 0;
+        float minDistance = float.MaxValue;
+        
+        for (int i = 0; i < _roomCenters.Count; i++)
+        {
+            float distance = (_roomCenters[i] - point).LengthSquared();
+            if (distance < minDistance)
+            {
+                minDistance = distance;
+                closestIndex = i;
+            }
+        }
+        
+        return closestIndex;
+    }
+    
+    // Returns the number of available extra rooms
+    public int GetExtraRoomCount()
+    {
+        return _extraRooms.Count;
+    }
+    
+    // Get extra room information for UI or gameplay logic
+    public List<(Rect2I room, Vector2I center)> GetExtraRooms()
+    {
+        List<(Rect2I, Vector2I)> result = new List<(Rect2I, Vector2I)>();
+        for (int i = 0; i < _extraRooms.Count; i++)
+        {
+            result.Add((_extraRooms[i], _extraRoomCenters[i]));
+        }
+        return result;
     }
     
     private void RenderDungeon()

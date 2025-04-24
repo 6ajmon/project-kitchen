@@ -13,6 +13,7 @@ public partial class GeneratorVisualizer : Node2D
     private Node2D _mstVisContainer;
     private Node2D _loopsVisContainer;
     private Node2D _corridorsVisContainer;
+    private Node2D _extraRoomsVisContainer;
     
     // Store previous positions to show movement
     private List<Rect2I> _previousCellPositions = new List<Rect2I>();
@@ -47,6 +48,10 @@ public partial class GeneratorVisualizer : Node2D
         _corridorsVisContainer = new Node2D();
         _corridorsVisContainer.Name = "CorridorsContainer";
         AddChild(_corridorsVisContainer);
+        
+        _extraRoomsVisContainer = new Node2D();
+        _extraRoomsVisContainer.Name = "ExtraRoomsContainer";
+        AddChild(_extraRoomsVisContainer);
     }
     
     public void VisualizeAllCells(List<Rect2I> cells)
@@ -320,6 +325,65 @@ public partial class GeneratorVisualizer : Node2D
                 }
             }
         }
+    }
+    
+    public void VisualizeExtraRooms(List<Rect2I> extraRooms, List<Vector2I> extraRoomCenters)
+    {
+        // Clear previous visualization
+        foreach (Node child in _extraRoomsVisContainer.GetChildren())
+        {
+            child.QueueFree();
+        }
+        
+        // Add visualization for each extra room
+        for (int i = 0; i < extraRooms.Count; i++)
+        {
+            Rect2I room = extraRooms[i];
+            Vector2I center = extraRoomCenters[i];
+            
+            // Extra room rectangle - orange color to indicate it's available but not active
+            ColorRect rect = new ColorRect();
+            rect.Position = new Vector2(room.Position.X, room.Position.Y);
+            rect.Size = new Vector2(room.Size.X, room.Size.Y);
+            rect.Color = new Color(0.9f, 0.6f, 0.1f, 0.4f); // Orange with transparency
+            _extraRoomsVisContainer.AddChild(rect);
+            
+            // Room border to make it more visible
+            Line2D border = new Line2D();
+            border.Width = 2.0f;
+            border.DefaultColor = new Color(0.9f, 0.6f, 0.1f, 0.8f);
+            border.AddPoint(new Vector2(room.Position.X, room.Position.Y));
+            border.AddPoint(new Vector2(room.Position.X + room.Size.X, room.Position.Y));
+            border.AddPoint(new Vector2(room.Position.X + room.Size.X, room.Position.Y + room.Size.Y));
+            border.AddPoint(new Vector2(room.Position.X, room.Position.Y + room.Size.Y));
+            border.AddPoint(new Vector2(room.Position.X, room.Position.Y));
+            _extraRoomsVisContainer.AddChild(border);
+            
+            // Add "+" symbol to indicate it can be added
+            float plusSize = 16.0f;
+            Line2D plusHorizontal = new Line2D();
+            plusHorizontal.Width = 3.0f;
+            plusHorizontal.DefaultColor = new Color(0.9f, 0.3f, 0.1f, 0.9f);
+            plusHorizontal.AddPoint(new Vector2(center.X - plusSize/2, center.Y));
+            plusHorizontal.AddPoint(new Vector2(center.X + plusSize/2, center.Y));
+            _extraRoomsVisContainer.AddChild(plusHorizontal);
+            
+            Line2D plusVertical = new Line2D();
+            plusVertical.Width = 3.0f;
+            plusVertical.DefaultColor = new Color(0.9f, 0.3f, 0.1f, 0.9f);
+            plusVertical.AddPoint(new Vector2(center.X, center.Y - plusSize/2));
+            plusVertical.AddPoint(new Vector2(center.X, center.Y + plusSize/2));
+            _extraRoomsVisContainer.AddChild(plusVertical);
+            
+            // Room number label
+            Label label = new Label();
+            label.Text = "E" + i.ToString();
+            label.Position = new Vector2(center.X - 10, center.Y - 20);
+            label.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.9f);
+            _extraRoomsVisContainer.AddChild(label);
+        }
+        
+        GD.Print($"Visualized {extraRooms.Count} potential extra rooms");
     }
     
     private bool IsCorridorCell(Rect2I cell, List<Rect2I> rooms)

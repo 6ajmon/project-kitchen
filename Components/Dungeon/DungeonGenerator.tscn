@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://btrd82av6j5pk"]
+[gd_scene load_steps=12 format=3 uid="uid://btrd82av6j5pk"]
 
 [ext_resource type="Script" uid="uid://dh0cisaqevjns" path="res://Components/Dungeon/DungeonGenerator.cs" id="1_s7lx6"]
 [ext_resource type="Script" uid="uid://canmv5ssx6gp5" path="res://Components/Dungeon/RoomGenerator.cs" id="2_xht7t"]
@@ -7,6 +7,7 @@
 [ext_resource type="Script" uid="uid://cgxm7cjexmdql" path="res://Components/Dungeon/GraphGenerator.cs" id="5_ed0ct"]
 [ext_resource type="Script" uid="uid://c2oijhwm5ryru" path="res://Components/Dungeon/HallwayGenerator.cs" id="6_qeo6l"]
 [ext_resource type="Script" uid="uid://3xhdvu0vxlia" path="res://Components/Dungeon/GeneratorVisualizer.cs" id="7_frg7a"]
+[ext_resource type="Script" uid="uid://fvaf2erar8c3" path="res://Components/Dungeon/ExtraRoomDeterminator.cs" id="7_xht7t"]
 [ext_resource type="Texture2D" uid="uid://cihvs1tcjg6tk" path="res://Assets/Sprites/dngtile.png" id="8_qmi7b"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_xht7t"]
@@ -36,6 +37,10 @@ script = ExtResource("5_ed0ct")
 
 [node name="HallwayGenerator" type="Node2D" parent="."]
 script = ExtResource("6_qeo6l")
+
+[node name="ExtraRoomDeterminator" type="Node2D" parent="."]
+script = ExtResource("7_xht7t")
+LargestExtraRoomsPercent = 1.0
 
 [node name="GeneratorVisualizer" type="Node2D" parent="."]
 script = ExtResource("7_frg7a")
