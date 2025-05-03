@@ -414,6 +414,6 @@ public partial class DungeonGenerator : Node2D
     private void RenderDungeon()
     {
         // Use the TilePlacer to handle all tile placement
-        _tilePlacer.PlaceTiles(_rooms, CellSpawnRadius);
+        _tilePlacer.PlaceTiles(_rooms);
     }
 }
