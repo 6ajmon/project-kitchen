@@ -9,14 +9,6 @@ public partial class TilePlacer : Node
     private TileMapLayer _floorLayer;
     private TileMapLayer _wallLayer;
     
-    // Floor tileset is 4x7 (1 + 4x6)
-    private const int FLOOR_ATLAS_WIDTH = 4;
-    private const int FLOOR_ATLAS_HEIGHT = 7;
-    
-    // Wall tileset is 4x6
-    private const int WALL_ATLAS_WIDTH = 4;
-    private const int WALL_ATLAS_HEIGHT = 6;
-    
     // Dictionary to store floor positions for fast lookup
     private Dictionary<Vector2I, bool> _floorPositions = new Dictionary<Vector2I, bool>();
     
@@ -81,26 +73,12 @@ public partial class TilePlacer : Node
     
     private Vector2I GetFloorTileVariation(int x, int y, Vector2I topLeft, Vector2I bottomRight)
     {
-        // Handle edge cases differently than center tiles for more natural looking dungeon
-        bool isEdge = x == topLeft.X || x == bottomRight.X - 1 || y == topLeft.Y || y == bottomRight.Y - 1;
-        
         // Generate a deterministic but seemingly random pattern based on coordinates
         int hash = (x * 7919) ^ (y * 6011); // Use prime numbers for better distribution
         Random random = new Random(hash);
         
-        // Based on atlas description:
-        // Primary floor tiles are at (2,2) = no walls, and variations
-        if (isEdge)
-        {
-            // Edge tiles - use variations with walls on appropriate sides
-            // For now, use simple floor tiles
-            return new Vector2I(2, 2); // Basic floor tile with no walls
-        }
-        else
-        {
-            // Center areas - use clean floor tiles
-            return new Vector2I(2, 2); // Basic floor tile with no walls
-        }
+        // Default floor tile with no walls (2,2)
+        return new Vector2I(2, 2);
     }
     
     private void PlaceInnerWallTiles(List<Rect2I> rooms)
@@ -151,76 +129,52 @@ public partial class TilePlacer : Node
     
     private Vector2I DetermineWallType(int x, int y, Vector2I topLeft, Vector2I bottomRight)
     {
-        // Determine the wall's position relative to the room
+        // Determine wall position relative to the room
         bool isTop = y == topLeft.Y;
         bool isBottom = y == bottomRight.Y - 1;
         bool isLeft = x == topLeft.X;
         bool isRight = x == bottomRight.X - 1;
         
-        // Generate deterministic but seemingly random variation
+        // Generate a deterministic but pseudo-random variation
         int hash = (x * 7919) ^ (y * 6011);
         Random random = new Random(hash);
         
-        // Corners
+        // Corner cases - corners have 2 walls adjacent to each other
+        // Diagonally swapped corners:
+        // Top left → Bottom right (swap with 4,0)
         if (isTop && isLeft)
-            return new Vector2I(1, 1); // Top-left corner - walls on N and W
+            return new Vector2I(4, 0); // Bottom right corner
         
+        // Top right → Bottom left (swap with 5,0)
         if (isTop && isRight)
-            return new Vector2I(3, 1); // Top-right corner - walls on N and E
+            return new Vector2I(5, 0); // Bottom left corner
         
+        // Bottom left → Top right (swap with 4,1)
         if (isBottom && isLeft)
-            return new Vector2I(1, 3); // Bottom-left corner - walls on S and W
+            return new Vector2I(4, 1); // Top right corner
         
+        // Bottom right → Top left (swap with 5,1)
         if (isBottom && isRight)
-            return new Vector2I(3, 3); // Bottom-right corner - walls on S and E
+            return new Vector2I(5, 1); // Top left corner
         
-        // Edges
+        // Edges - edges have one wall
+        // Inverted: Top edge (floor from N) becomes Bottom edge (floor from S)
         if (isTop)
-            return new Vector2I(2, 1); // Top edge - wall on N
+            return new Vector2I(1, 3); // Bottom edge - floor from S
         
+        // Inverted: Bottom edge (floor from S) becomes Top edge (floor from N)
         if (isBottom)
-            return new Vector2I(2, 3); // Bottom edge - wall on S
+            return new Vector2I(1, 1); // Top edge - floor from N
         
+        // Inverted: Left edge (floor from W) becomes Right edge (floor from E)
         if (isLeft)
-            return new Vector2I(1, 2); // Left edge - wall on W
+            return new Vector2I(2, 2); // Right edge - floor from E
         
+        // Inverted: Right edge (floor from E) becomes Left edge (floor from W)
         if (isRight)
-            return new Vector2I(3, 2); // Right edge - wall on E
+            return new Vector2I(0, 2); // Left edge - floor from W
         
-        // Default, though we shouldn't reach here
-        return new Vector2I(random.Next(0, WALL_ATLAS_WIDTH), random.Next(0, 2));
-    }
-    
-    private void PlaceWallTiles(float searchRadius)
-    {
-        // This method is no longer used as we now build walls inside rooms
-    }
-    
-    private int CountAdjacentFloors(Vector2I pos)
-    {
-        int count = 0;
-        
-        // Check all 8 surrounding tiles
-        for (int dx = -1; dx <= 1; dx++)
-        {
-            for (int dy = -1; dy <= 1; dy++)
-            {
-                if (dx == 0 && dy == 0) continue;
-                
-                Vector2I checkPos = pos + new Vector2I(dx, dy);
-                if (_floorPositions.ContainsKey(checkPos))
-                {
-                    count++;
-                }
-            }
-        }
-        
-        return count;
-    }
-    
-    private Vector2I GetWallTileType(Vector2I pos)
-    {
-        // This method is no longer used as we now build walls inside rooms
-        return new Vector2I(0, 0);
+        // Default case (shouldn't reach here)
+        return new Vector2I(1, 2); // No floor around
     }
 }

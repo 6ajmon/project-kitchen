@@ -77,6 +77,7 @@ sources/0 = SubResource("TileSetAtlasSource_4l1b3")
 script = ExtResource("1_s7lx6")
 FloorLayer = NodePath("TileMapLayer2")
 WallLayer = NodePath("TileMapLayer3")
+metadata/_edit_horizontal_guides_ = [-40.0]
 
 [node name="RoomGenerator" type="Node2D" parent="."]
 script = ExtResource("2_xht7t")
