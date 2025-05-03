@@ -34,6 +34,7 @@ public partial class DungeonGenerator : Node2D
     private HallwayGenerator _hallwayGenerator;
     private GeneratorVisualizer _visualizer;
     private ExtraRoomDeterminator _extraRoomDeterminator;
+    private TilePlacer _tilePlacer;
     
     public enum GenerationState
     {
@@ -110,6 +111,18 @@ public partial class DungeonGenerator : Node2D
         _extraRoomDeterminator = GetNode<ExtraRoomDeterminator>("ExtraRoomDeterminator");
         _extraRoomDeterminator.TileSize = TileSize;
         _extraRoomDeterminator.LargestExtraRoomsPercent = ExtraRoomsPercent;
+        
+        // Initialize tile placer
+        _tilePlacer = GetNode<TilePlacer>("TilePlacer");
+        if (_tilePlacer == null)
+        {
+            // Create a new TilePlacer if it doesn't exist in the scene
+            _tilePlacer = new TilePlacer();
+            _tilePlacer.Name = "TilePlacer";
+            AddChild(_tilePlacer);
+        }
+        _tilePlacer.TileSize = TileSize;
+        _tilePlacer.Initialize(FloorLayer, WallLayer);
         
         // Initialize visualizer if needed
         if (EnableVisualization)
@@ -353,7 +366,7 @@ public partial class DungeonGenerator : Node2D
         _extraRooms.RemoveAt(extraRoomIndex);
         _extraRoomCenters.RemoveAt(extraRoomIndex);
         
-        // Update dungeon rendering
+        // Update dungeon rendering using the tile placer
         RenderDungeon();
         
         GD.Print($"Added extra room to the dungeon, connected to room {closestRoomIndex}");
@@ -400,70 +413,7 @@ public partial class DungeonGenerator : Node2D
     
     private void RenderDungeon()
     {
-        // Clear existing tiles
-        FloorLayer.Clear();
-        WallLayer.Clear();
-        
-        // First place floor tiles for rooms and corridors
-        foreach (Rect2I room in _rooms)
-        {
-            // Convert room coordinates to tile coordinates
-            Vector2I topLeft = new Vector2I(
-                room.Position.X / TileSize,
-                room.Position.Y / TileSize
-            );
-            
-            Vector2I bottomRight = new Vector2I(
-                (room.Position.X + room.Size.X) / TileSize,
-                (room.Position.Y + room.Size.Y) / TileSize
-            );
-            
-            // Place floor tiles
-            for (int x = topLeft.X; x < bottomRight.X; x++)
-            {
-                for (int y = topLeft.Y; y < bottomRight.Y; y++)
-                {
-                    FloorLayer.SetCell(new Vector2I(x, y), 0, new Vector2I(0, 0), 0);
-                }
-            }
-        }
-        
-        // Then place wall tiles around floor tiles
-        int searchRadius = (int)(CellSpawnRadius * 2);
-        for (int x = -searchRadius; x < searchRadius; x++)
-        {
-            for (int y = -searchRadius; y < searchRadius; y++)
-            {
-                Vector2I pos = new Vector2I(x, y);
-                
-                // If this position doesn't have a floor
-                if (FloorLayer.GetCellSourceId(pos) == -1)
-                {
-                    // Check if any adjacent cell has a floor
-                    bool adjacentToFloor = false;
-                    for (int dx = -1; dx <= 1; dx++)
-                    {
-                        for (int dy = -1; dy <= 1; dy++)
-                        {
-                            if (dx == 0 && dy == 0) continue;
-                            
-                            Vector2I checkPos = pos + new Vector2I(dx, dy);
-                            if (FloorLayer.GetCellSourceId(checkPos) != -1)
-                            {
-                                adjacentToFloor = true;
-                                break;
-                            }
-                        }
-                        if (adjacentToFloor) break;
-                    }
-                    
-                    // If adjacent to floor, place a wall
-                    if (adjacentToFloor)
-                    {
-                        WallLayer.SetCell(pos, 1, new Vector2I(0, 0), 0);
-                    }
-                }
-            }
-        }
+        // Use the TilePlacer to handle all tile placement
+        _tilePlacer.PlaceTiles(_rooms, CellSpawnRadius);
     }
 }
