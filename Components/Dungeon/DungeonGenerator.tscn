@@ -1,6 +1,48 @@
-[gd_scene load_steps=2 format=3 uid="uid://btrd82av6j5pk"]
+[gd_scene load_steps=12 format=3 uid="uid://btrd82av6j5pk"]
 
 [ext_resource type="Script" uid="uid://dh0cisaqevjns" path="res://Components/Dungeon/DungeonGenerator.cs" id="1_s7lx6"]
+[ext_resource type="Script" uid="uid://canmv5ssx6gp5" path="res://Components/Dungeon/RoomGenerator.cs" id="2_xht7t"]
+[ext_resource type="Script" uid="uid://cp1g5b3402vl" path="res://Components/Dungeon/RoomSeparator.cs" id="3_4l1b3"]
+[ext_resource type="Script" uid="uid://cdft5ttwfku4r" path="res://Components/Dungeon/MainRoomDeterminator.cs" id="4_t4n6m"]
+[ext_resource type="Script" uid="uid://cgxm7cjexmdql" path="res://Components/Dungeon/GraphGenerator.cs" id="5_ed0ct"]
+[ext_resource type="Script" uid="uid://c2oijhwm5ryru" path="res://Components/Dungeon/HallwayGenerator.cs" id="6_qeo6l"]
+[ext_resource type="Script" uid="uid://3xhdvu0vxlia" path="res://Components/Dungeon/GeneratorVisualizer.cs" id="7_frg7a"]
+[ext_resource type="Script" uid="uid://fvaf2erar8c3" path="res://Components/Dungeon/ExtraRoomDeterminator.cs" id="7_xht7t"]
+[ext_resource type="Texture2D" uid="uid://cihvs1tcjg6tk" path="res://Assets/Sprites/dngtile.png" id="8_qmi7b"]
 
-[node name="DungeonGenerator" type="Node"]
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_xht7t"]
+texture = ExtResource("8_qmi7b")
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_4l1b3"]
+sources/0 = SubResource("TileSetAtlasSource_xht7t")
+
+[node name="DungeonGenerator" type="Node2D" node_paths=PackedStringArray("FloorLayer", "WallLayer")]
 script = ExtResource("1_s7lx6")
+FloorLayer = NodePath("TileMapLayer2")
+WallLayer = NodePath("TileMapLayer2")
+
+[node name="RoomGenerator" type="Node2D" parent="."]
+script = ExtResource("2_xht7t")
+
+[node name="RoomSeparator" type="Node2D" parent="."]
+script = ExtResource("3_4l1b3")
+
+[node name="MainRoomDeterminator" type="Node2D" parent="."]
+script = ExtResource("4_t4n6m")
+
+[node name="GraphGenerator" type="Node2D" parent="."]
+script = ExtResource("5_ed0ct")
+
+[node name="HallwayGenerator" type="Node2D" parent="."]
+script = ExtResource("6_qeo6l")
+
+[node name="ExtraRoomDeterminator" type="Node2D" parent="."]
+script = ExtResource("7_xht7t")
+
+[node name="GeneratorVisualizer" type="Node2D" parent="."]
+script = ExtResource("7_frg7a")
+
+[node name="TileMapLayer2" type="TileMapLayer" parent="."]
+modulate = Color(1, 0.258824, 1, 0.596078)
+tile_set = SubResource("TileSet_4l1b3")
