@@ -413,6 +413,9 @@ public partial class DungeonGenerator : Node2D
     
     private void RenderDungeon()
     {
+        // Make sure TilePlacer is initialized with the current layers
+        _tilePlacer.Initialize(FloorLayer, WallLayer);
+        
         // Use the TilePlacer to handle all tile placement
         _tilePlacer.PlaceTiles(_rooms);
     }

@@ -9,13 +9,17 @@ public partial class TilePlacer : Node
     private TileMapLayer _floorLayer;
     private TileMapLayer _wallLayer;
     
-    // Dictionary to store floor positions for fast lookup
+    // Dictionaries and sets for tile tracking
     private Dictionary<Vector2I, bool> _floorPositions = new Dictionary<Vector2I, bool>();
-    
-    // Dictionary to store wall positions for fast lookup (for floor tile selection)
     private Dictionary<Vector2I, bool> _wallPositions = new Dictionary<Vector2I, bool>();
+    private HashSet<Vector2I> _hallwayPositions = new HashSet<Vector2I>();
+    private HashSet<Vector2I> _hallwayEdges = new HashSet<Vector2I>();
     
-    // Wall detection directions
+    // Minimum dimensions for a room (in tiles)
+    private const int MinRoomWidth = 5;
+    private const int MinRoomHeight = 5;
+    
+    // Direction vectors for checking surrounding tiles
     private readonly Vector2I[] _directions = new Vector2I[]
     {
         new Vector2I(0, -1),  // N
@@ -28,7 +32,7 @@ public partial class TilePlacer : Node
         new Vector2I(-1, -1)  // NW
     };
 
-    // Wall indices for easier reference
+    // Direction indices
     private const int N = 0;
     private const int NE = 1;
     private const int E = 2;
@@ -38,89 +42,155 @@ public partial class TilePlacer : Node
     private const int W = 6;
     private const int NW = 7;
     
+    // Cardinal directions for hallway edge detection
+    private readonly Vector2I[] _cardinalDirections = new Vector2I[]
+    {
+        new Vector2I(0, -1),  // North
+        new Vector2I(1, 0),   // East
+        new Vector2I(0, 1),   // South
+        new Vector2I(-1, 0),  // West
+    };
+    
     public void Initialize(TileMapLayer floorLayer, TileMapLayer wallLayer)
     {
         _floorLayer = floorLayer;
         _wallLayer = wallLayer;
-        _floorPositions.Clear();
-        _wallPositions.Clear();
+        ClearData();
     }
     
     public void ClearTiles()
     {
         if (_floorLayer != null) _floorLayer.Clear();
         if (_wallLayer != null) _wallLayer.Clear();
+        ClearData();
+    }
+    
+    private void ClearData()
+    {
         _floorPositions.Clear();
         _wallPositions.Clear();
+        _hallwayPositions.Clear();
+        _hallwayEdges.Clear();
     }
     
     public void PlaceTiles(List<Rect2I> rooms)
     {
-        // Clear existing tiles
         ClearTiles();
-        
-        // First place floor tiles
+        IdentifyHallways(rooms);
+        IdentifyHallwayEdges();
+        PrecomputeWallPositions(rooms);
         PlaceFloorTiles(rooms);
-        
-        // Then place wall tiles inside rooms (instead of around them)
         PlaceInnerWallTiles(rooms);
+        PlaceHallwayEdgeWalls();
     }
     
-    private void PlaceFloorTiles(List<Rect2I> rooms)
+    private void IdentifyHallways(List<Rect2I> rooms)
     {
-        // Pre-populate wall positions for better floor tile selection
-        PrecomputeWallPositions(rooms);
+        _hallwayPositions.Clear();
         
-        foreach (Rect2I room in rooms)
+        HashSet<Vector2I> roomCells = new HashSet<Vector2I>();
+        List<Rect2I> mainRooms = GetMainRooms(rooms);
+        
+        // Add all cells from main rooms to the room cells set
+        foreach (var room in mainRooms)
         {
-            // Convert room coordinates to tile coordinates
-            Vector2I topLeft = new Vector2I(
-                room.Position.X / TileSize,
-                room.Position.Y / TileSize
-            );
+            Vector2I topLeft = GetTilePosition(room.Position);
+            Vector2I bottomRight = GetTilePosition(room.Position + room.Size);
             
-            Vector2I bottomRight = new Vector2I(
-                (room.Position.X + room.Size.X) / TileSize,
-                (room.Position.Y + room.Size.Y) / TileSize
-            );
+            for (int x = topLeft.X; x < bottomRight.X; x++)
+            {
+                for (int y = topLeft.Y; y < bottomRight.Y; y++)
+                {
+                    roomCells.Add(new Vector2I(x, y));
+                }
+            }
+        }
+        
+        // Identify hallways (cells in small rooms that aren't in main rooms)
+        foreach (var room in rooms)
+        {
+            if (mainRooms.Contains(room))
+                continue;
             
-            // Place floor tiles with variations
+            Vector2I topLeft = GetTilePosition(room.Position);
+            Vector2I bottomRight = GetTilePosition(room.Position + room.Size);
+            
             for (int x = topLeft.X; x < bottomRight.X; x++)
             {
                 for (int y = topLeft.Y; y < bottomRight.Y; y++)
                 {
                     Vector2I pos = new Vector2I(x, y);
-                    
-                    // Skip if there's a wall here
-                    if (_wallPositions.ContainsKey(pos)) continue;
-                    
-                    // Choose appropriate floor tile based on surrounding walls
-                    Vector2I atlasCoord = GetFloorTileVariation(pos);
-                    
-                    // Place floor tile and record its position
-                    _floorLayer.SetCell(pos, 2, atlasCoord, 0); // Use source_id 2 for floor tileset
-                    _floorPositions[pos] = true;
+                    if (!roomCells.Contains(pos))
+                    {
+                        _hallwayPositions.Add(pos);
+                    }
                 }
             }
         }
+        
+        GD.Print($"Identified {_hallwayPositions.Count} hallway cells for floor placement");
+    }
+    
+    private List<Rect2I> GetMainRooms(List<Rect2I> rooms)
+    {
+        List<Rect2I> mainRooms = new List<Rect2I>();
+        
+        foreach (var room in rooms)
+        {
+            int widthInTiles = room.Size.X / TileSize;
+            int heightInTiles = room.Size.Y / TileSize;
+            
+            if (widthInTiles >= MinRoomWidth && heightInTiles >= MinRoomHeight)
+            {
+                mainRooms.Add(room);
+            }
+        }
+        
+        return mainRooms;
+    }
+    
+    private Vector2I GetTilePosition(Vector2I position)
+    {
+        return new Vector2I(position.X / TileSize, position.Y / TileSize);
+    }
+    
+    private void IdentifyHallwayEdges()
+    {
+        _hallwayEdges.Clear();
+        
+        HashSet<Vector2I> allFloorPositions = new HashSet<Vector2I>(_hallwayPositions);
+        
+        foreach (var pos in _hallwayPositions)
+        {
+            foreach (var dir in _cardinalDirections)
+            {
+                Vector2I adjacentPos = pos + dir;
+                
+                if (!allFloorPositions.Contains(adjacentPos))
+                {
+                    _hallwayEdges.Add(adjacentPos);
+                }
+            }
+        }
+        
+        GD.Print($"Identified {_hallwayEdges.Count} hallway edge positions for wall placement");
     }
     
     private void PrecomputeWallPositions(List<Rect2I> rooms)
     {
         _wallPositions.Clear();
         
+        // Mark wall positions for main rooms
         foreach (Rect2I room in rooms)
         {
-            // Convert room coordinates to tile coordinates
-            Vector2I topLeft = new Vector2I(
-                room.Position.X / TileSize,
-                room.Position.Y / TileSize
-            );
+            int widthInTiles = room.Size.X / TileSize;
+            int heightInTiles = room.Size.Y / TileSize;
             
-            Vector2I bottomRight = new Vector2I(
-                (room.Position.X + room.Size.X) / TileSize,
-                (room.Position.Y + room.Size.Y) / TileSize
-            );
+            if (widthInTiles < MinRoomWidth || heightInTiles < MinRoomHeight)
+                continue;
+                
+            Vector2I topLeft = GetTilePosition(room.Position);
+            Vector2I bottomRight = GetTilePosition(room.Position + room.Size);
             
             // Mark wall positions
             for (int x = topLeft.X; x < bottomRight.X; x++)
@@ -137,11 +207,48 @@ public partial class TilePlacer : Node
                 }
             }
         }
+        
+        // Add hallway edge walls
+        foreach (var pos in _hallwayEdges)
+        {
+            _wallPositions[pos] = true;
+        }
+    }
+    
+    private void PlaceFloorTiles(List<Rect2I> rooms)
+    {
+        foreach (Rect2I room in rooms)
+        {
+            Vector2I topLeft = GetTilePosition(room.Position);
+            Vector2I bottomRight = GetTilePosition(room.Position + room.Size);
+            
+            for (int x = topLeft.X; x < bottomRight.X; x++)
+            {
+                for (int y = topLeft.Y; y < bottomRight.Y; y++)
+                {
+                    Vector2I pos = new Vector2I(x, y);
+                    
+                    if (_hallwayEdges.Contains(pos))
+                        continue;
+                    
+                    if (_hallwayPositions.Contains(pos) || !_wallPositions.ContainsKey(pos))
+                    {
+                        Vector2I atlasCoord = GetFloorTileVariation(pos);
+                        _floorLayer.SetCell(pos, 2, atlasCoord, 0);
+                        _floorPositions[pos] = true;
+                    }
+                }
+            }
+        }
     }
     
     private Vector2I GetFloorTileVariation(Vector2I pos)
     {
-        // Check for walls in all 8 directions
+        if (_hallwayPositions.Contains(pos))
+        {
+            return new Vector2I(2, 2);
+        }
+        
         bool[] wallsAround = new bool[8];
         
         for (int i = 0; i < _directions.Length; i++)
@@ -150,109 +257,100 @@ public partial class TilePlacer : Node
             wallsAround[i] = _wallPositions.ContainsKey(checkPos);
         }
         
-        // Now determine the proper floor tile based on wall configuration
-        
-        // Check if it's an isle (surrounded by walls)
         if (CountWallsAround(wallsAround) == 8)
         {
-            return new Vector2I(4, 0); // Isle
+            return new Vector2I(4, 0);
         }
         
-        // Check for specific wall configurations
         if (wallsAround[N] && wallsAround[W])
         {
-            return new Vector2I(1, 1); // Walls on N and W
+            return new Vector2I(1, 1);
         }
         if (wallsAround[N] && !wallsAround[W] && !wallsAround[E])
         {
-            return new Vector2I(2, 1); // Wall on N
+            return new Vector2I(2, 1);
         }
         if (wallsAround[N] && wallsAround[E])
         {
-            return new Vector2I(3, 1); // Walls on N and E
+            return new Vector2I(3, 1);
         }
         if (!wallsAround[N] && !wallsAround[S] && wallsAround[W])
         {
-            return new Vector2I(1, 2); // Wall on W
+            return new Vector2I(1, 2);
         }
         if (!wallsAround[N] && !wallsAround[S] && wallsAround[E])
         {
-            return new Vector2I(3, 2); // Wall on E
+            return new Vector2I(3, 2);
         }
         if (wallsAround[W] && wallsAround[S])
         {
-            return new Vector2I(1, 3); // Walls on W and S
+            return new Vector2I(1, 3);
         }
         if (wallsAround[S] && !wallsAround[W] && !wallsAround[E])
         {
-            return new Vector2I(2, 3); // Wall on S
+            return new Vector2I(2, 3);
         }
         if (wallsAround[S] && wallsAround[E])
         {
-            return new Vector2I(3, 3); // Walls on S and E
+            return new Vector2I(3, 3);
         }
         
-        // Check for corner walls
         if (wallsAround[SE])
         {
-            return new Vector2I(5, 0); // Wall on SE
+            return new Vector2I(5, 0);
         }
         if (wallsAround[SW])
         {
-            return new Vector2I(6, 0); // Wall on SW
+            return new Vector2I(6, 0);
         }
         if (wallsAround[NE])
         {
-            return new Vector2I(5, 1); // Wall on NE
+            return new Vector2I(5, 1);
         }
         if (wallsAround[NW])
         {
-            return new Vector2I(6, 1); // Wall on NW
+            return new Vector2I(6, 1);
         }
         
-        // Check for double-corner walls
         if (wallsAround[NE] && wallsAround[SE])
         {
-            return new Vector2I(5, 2); // Walls on NE and SE
+            return new Vector2I(5, 2);
         }
         if (wallsAround[NW] && wallsAround[NE])
         {
-            return new Vector2I(6, 2); // Walls on NE and NW
+            return new Vector2I(6, 2);
         }
         if (wallsAround[NW] && wallsAround[SW])
         {
-            return new Vector2I(5, 3); // Walls on NW and SW
+            return new Vector2I(5, 3);
         }
         if (wallsAround[SW] && wallsAround[SE])
         {
-            return new Vector2I(6, 3); // Walls on SE and SW
+            return new Vector2I(6, 3);
         }
         
-        // Check for row patterns
         if (wallsAround[W] && !wallsAround[E] && !wallsAround[N] && !wallsAround[S])
         {
-            return new Vector2I(1, 0); // Row left
+            return new Vector2I(1, 0);
         }
         if (wallsAround[E] && !wallsAround[W] && !wallsAround[N] && !wallsAround[S])
         {
-            return new Vector2I(3, 0); // Row right
+            return new Vector2I(3, 0);
         }
         
-        // Check for column patterns
         if (wallsAround[N] && !wallsAround[S])
         {
-            return new Vector2I(4, 1); // Column upper
+            return new Vector2I(4, 1);
         }
         if (wallsAround[N] && wallsAround[S])
         {
-            return new Vector2I(4, 2); // Column center
+            return new Vector2I(4, 2);
         }
         if (!wallsAround[N] && wallsAround[S])
         {
-            return new Vector2I(4, 3); // Column lower
+            return new Vector2I(4, 3);
         }
         
-        // Default - no walls around
         return new Vector2I(2, 2);
     }
     
@@ -270,41 +368,38 @@ public partial class TilePlacer : Node
     {
         foreach (Rect2I room in rooms)
         {
-            // Convert room coordinates to tile coordinates
-            Vector2I topLeft = new Vector2I(
-                room.Position.X / TileSize,
-                room.Position.Y / TileSize
-            );
+            int widthInTiles = room.Size.X / TileSize;
+            int heightInTiles = room.Size.Y / TileSize;
             
-            Vector2I bottomRight = new Vector2I(
-                (room.Position.X + room.Size.X) / TileSize,
-                (room.Position.Y + room.Size.Y) / TileSize
-            );
+            if (widthInTiles < MinRoomWidth || heightInTiles < MinRoomHeight)
+                continue;
+                
+            Vector2I topLeft = GetTilePosition(room.Position);
+            Vector2I bottomRight = GetTilePosition(room.Position + room.Size);
             
-            // Build walls on the edges of the room
             for (int x = topLeft.X; x < bottomRight.X; x++)
             {
                 for (int y = topLeft.Y; y < bottomRight.Y; y++)
                 {
                     Vector2I pos = new Vector2I(x, y);
                     
-                    // Check if the tile is at the edge of the room
+                    if (_hallwayPositions.Contains(pos))
+                        continue;
+                        
                     bool isEdge = x == topLeft.X || x == bottomRight.X - 1 || 
                                  y == topLeft.Y || y == bottomRight.Y - 1;
                     
                     if (isEdge)
                     {
-                        // Remove floor tile (if exists) and mark this position as non-floor
-                        if (_floorPositions.ContainsKey(pos))
-                        {
-                            _floorPositions.Remove(pos);
-                            _floorLayer.EraseCell(pos);
-                        }
+                        RemoveFloorTileAt(pos);
                         
-                        // Determine wall type based on its position in the room
-                        Vector2I wallType = DetermineWallType(x, y, topLeft, bottomRight);
+                        // Determine position flags for room wall
+                        bool isTop = y == topLeft.Y;
+                        bool isBottom = y == bottomRight.Y - 1;
+                        bool isLeft = x == topLeft.X;
+                        bool isRight = x == bottomRight.X - 1;
                         
-                        // Place the wall
+                        Vector2I wallType = DetermineWallType(isTop, isBottom, isLeft, isRight);
                         _wallLayer.SetCell(pos, 0, wallType, 0);
                     }
                 }
@@ -312,50 +407,61 @@ public partial class TilePlacer : Node
         }
     }
     
-    private Vector2I DetermineWallType(int x, int y, Vector2I topLeft, Vector2I bottomRight)
+    private void RemoveFloorTileAt(Vector2I pos)
     {
-        // Determine wall position relative to the room
-        bool isTop = y == topLeft.Y;
-        bool isBottom = y == bottomRight.Y - 1;
-        bool isLeft = x == topLeft.X;
-        bool isRight = x == bottomRight.X - 1;
-        
-        // Corner cases - corners have 2 walls adjacent to each other
-        // Diagonally swapped corners:
-        // Top left → Bottom right (swap with 4,0)
-        if (isTop && isLeft)
-            return new Vector2I(4, 0); // Bottom right corner
-        
-        // Top right → Bottom left (swap with 5,0)
-        if (isTop && isRight)
-            return new Vector2I(5, 0); // Bottom left corner
-        
-        // Bottom left → Top right (swap with 4,1)
-        if (isBottom && isLeft)
-            return new Vector2I(4, 1); // Top right corner
-        
-        // Bottom right → Top left (swap with 5,1)
-        if (isBottom && isRight)
-            return new Vector2I(5, 1); // Top left corner
-        
-        // Edges - edges have one wall
-        // Inverted: Top edge (floor from N) becomes Bottom edge (floor from S)
-        if (isTop)
-            return new Vector2I(1, 3); // Bottom edge - floor from S
-        
-        // Inverted: Bottom edge (floor from S) becomes Top edge (floor from N)
-        if (isBottom)
-            return new Vector2I(1, 1); // Top edge - floor from N
-        
-        // Inverted: Left edge (floor from W) becomes Right edge (floor from E)
-        if (isLeft)
-            return new Vector2I(2, 2); // Right edge - floor from E
-        
-        // Inverted: Right edge (floor from E) becomes Left edge (floor from W)
-        if (isRight)
-            return new Vector2I(0, 2); // Left edge - floor from W
-        
-        // Default case (shouldn't reach here)
-        return new Vector2I(1, 2); // No floor around
+        if (_floorPositions.ContainsKey(pos))
+        {
+            _floorPositions.Remove(pos);
+            _floorLayer.EraseCell(pos);
+        }
     }
+    
+    private void PlaceHallwayEdgeWalls()
+    {
+        foreach (Vector2I pos in _hallwayEdges)
+        {
+            if (_wallLayer.GetCellSourceId(pos) != -1)
+                continue;
+                
+            RemoveFloorTileAt(pos);
+            
+            // Check neighboring floor tiles
+            bool northFloor = _floorPositions.ContainsKey(pos + new Vector2I(0, -1));
+            bool eastFloor = _floorPositions.ContainsKey(pos + new Vector2I(1, 0));
+            bool southFloor = _floorPositions.ContainsKey(pos + new Vector2I(0, 1));
+            bool westFloor = _floorPositions.ContainsKey(pos + new Vector2I(-1, 0));
+            
+            Vector2I wallType = DetermineWallType(
+                southFloor, northFloor, eastFloor, westFloor);
+            
+            _wallLayer.SetCell(pos, 0, wallType, 0);
+        }
+    }
+    
+    private Vector2I DetermineWallType(bool isTop, bool isBottom, bool isLeft, bool isRight)
+    {
+        // Corners
+        if (isTop && isLeft)
+            return new Vector2I(4, 0);     // Bottom right corner
+        if (isTop && isRight) 
+            return new Vector2I(5, 0);     // Bottom left corner
+        if (isBottom && isLeft)
+            return new Vector2I(4, 1);     // Top right corner
+        if (isBottom && isRight)
+            return new Vector2I(5, 1);     // Top left corner
+        
+        // Straight walls
+        if (isTop)
+            return new Vector2I(1, 3);     // Bottom edge
+        if (isBottom)
+            return new Vector2I(1, 1);     // Top edge
+        if (isLeft)
+            return new Vector2I(2, 2);     // Right edge
+        if (isRight)
+            return new Vector2I(0, 2);     // Left edge
+        
+        // Default
+        return new Vector2I(1, 2);
+    }
+    
 }
