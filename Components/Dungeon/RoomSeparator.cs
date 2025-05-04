@@ -78,10 +78,10 @@ public partial class RoomSeparator : Node2D
                 (float)GD.RandRange(-10, 10)
             );
             
-            // Create collision shape matching cell size
+            // Create collision shape with expanded size (1 tile bigger in each direction)
             CollisionShape2D shape = new CollisionShape2D();
             RectangleShape2D rectShape = new RectangleShape2D();
-            rectShape.Size = new Vector2(cell.Size.X, cell.Size.Y);
+            rectShape.Size = new Vector2(cell.Size.X + TileSize * 2, cell.Size.Y + TileSize * 2);
             shape.Shape = rectShape;
             
             // Add collision shape to body
@@ -93,6 +93,7 @@ public partial class RoomSeparator : Node2D
             
             // Store original rect dimensions for later reference
             body.SetMeta("original_size", new Vector2(cell.Size.X, cell.Size.Y));
+            body.SetMeta("physics_size", new Vector2(cell.Size.X + TileSize * 2, cell.Size.Y + TileSize * 2));
         }
     }
     
@@ -107,7 +108,7 @@ public partial class RoomSeparator : Node2D
             Vector2 position = body.Position;
             Vector2 originalSize = (Vector2)body.GetMeta("original_size");
             
-            // Calculate top-left corner
+            // Calculate top-left corner (compensating for the expanded physics body)
             Vector2 topLeft = position - originalSize / 2;
             
             // Ensure grid alignment
@@ -135,7 +136,7 @@ public partial class RoomSeparator : Node2D
             Vector2 position = body.Position;
             Vector2 originalSize = (Vector2)body.GetMeta("original_size");
             
-            // Calculate the top-left corner
+            // Calculate the top-left corner (using original size, not expanded physics size)
             Vector2 topLeft = position - originalSize / 2;
             
             // Ensure grid alignment

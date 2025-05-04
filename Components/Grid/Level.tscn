@@ -20,4 +20,5 @@ minZoom = 0.001
 NumberOfCells = 64
 LargestRoomsPercent = 0.25
 LoopPercent = 0.125
+EnableVisualization = false
 VisualizationStepDelay = 0.01

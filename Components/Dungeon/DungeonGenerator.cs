@@ -11,8 +11,8 @@ public partial class DungeonGenerator : Node2D
     [Export] public int TileSize = 16;
     [Export] public float ExtraRoomsPercent = 1.0f;
     
-    [Export] public TileMapLayer FloorLayer;
-    [Export] public TileMapLayer WallLayer;
+    [Export] public TileMapLayer WorldTileMap;
+    [Export] public TileMapLayer DisplayTileMap;
     
     [Export] public bool EnableVisualization = true;
     [Export] public float VisualizationStepDelay = 0.5f;
@@ -34,7 +34,6 @@ public partial class DungeonGenerator : Node2D
     private HallwayGenerator _hallwayGenerator;
     private GeneratorVisualizer _visualizer;
     private ExtraRoomDeterminator _extraRoomDeterminator;
-    private TilePlacer _tilePlacer;
     
     public enum GenerationState
     {
@@ -59,7 +58,7 @@ public partial class DungeonGenerator : Node2D
         _rng.Randomize();
         
         // Ensure we have valid layers
-        if (FloorLayer == null || WallLayer == null)
+        if (WorldTileMap == null || DisplayTileMap == null)
         {
             GD.PrintErr("Floor or Wall layer not assigned. Please assign them in the Inspector.");
             return;
@@ -111,19 +110,7 @@ public partial class DungeonGenerator : Node2D
         _extraRoomDeterminator = GetNode<ExtraRoomDeterminator>("ExtraRoomDeterminator");
         _extraRoomDeterminator.TileSize = TileSize;
         _extraRoomDeterminator.LargestExtraRoomsPercent = ExtraRoomsPercent;
-        
-        // Initialize tile placer
-        _tilePlacer = GetNode<TilePlacer>("TilePlacer");
-        if (_tilePlacer == null)
-        {
-            // Create a new TilePlacer if it doesn't exist in the scene
-            _tilePlacer = new TilePlacer();
-            _tilePlacer.Name = "TilePlacer";
-            AddChild(_tilePlacer);
-        }
-        _tilePlacer.TileSize = TileSize;
-        _tilePlacer.Initialize(FloorLayer, WallLayer);
-        
+    
         // Initialize visualizer if needed
         if (EnableVisualization)
         {
@@ -413,10 +400,108 @@ public partial class DungeonGenerator : Node2D
     
     private void RenderDungeon()
     {
-        // Make sure TilePlacer is initialized with the current layers
-        _tilePlacer.Initialize(FloorLayer, WallLayer);
+        // Clear any existing tiles on the WorldTileMap
+        WorldTileMap.Clear();
         
-        // Use the TilePlacer to handle all tile placement
-        _tilePlacer.PlaceTiles(_rooms);
+        // Vector2I constants for tile atlas coordinates
+        Vector2I wallTile = new Vector2I(0, 0);
+        Vector2I floorTile = new Vector2I(1, 0);
+        
+        // Create a set of all floor tile positions (in tile coordinates, not pixels)
+        HashSet<Vector2I> floorPositions = new HashSet<Vector2I>();
+        HashSet<Vector2I> wallPositions = new HashSet<Vector2I>();
+        
+        // Add all room and corridor tiles to the floor positions
+        foreach (var room in _rooms)
+        {
+            // Convert pixel coordinates to tile coordinates
+            int startTileX = room.Position.X / TileSize;
+            int startTileY = room.Position.Y / TileSize;
+            int widthInTiles = Mathf.CeilToInt((float)room.Size.X / TileSize);
+            int heightInTiles = Mathf.CeilToInt((float)room.Size.Y / TileSize);
+            
+            // Iterate through tiles, not pixels
+            for (int tileY = startTileY; tileY < startTileY + heightInTiles; tileY++)
+            {
+                for (int tileX = startTileX; tileX < startTileX + widthInTiles; tileX++)
+                {
+                    floorPositions.Add(new Vector2I(tileX, tileY));
+                }
+            }
+            
+            // Place walls around this room's perimeter
+            PlaceWallsAroundRoom(startTileX, startTileY, widthInTiles, heightInTiles, floorPositions, wallPositions);
+        }
+        
+        // Place floor tiles
+        foreach (var tilePos in floorPositions)
+        {
+            WorldTileMap.SetCell(tilePos, 0, floorTile);
+        }
+        
+        // Place wall tiles at all wall positions
+        foreach (var wallPos in wallPositions)
+        {
+            WorldTileMap.SetCell(wallPos, 0, wallTile);
+        }
+        
+        // Additionally check for any corridor areas that need walls
+        foreach (var floorTilePos in floorPositions)
+        {
+            // Check orthogonal neighbors (up, down, left, right)
+            Vector2I[] neighbors = {
+                new Vector2I(floorTilePos.X, floorTilePos.Y - 1), // Up
+                new Vector2I(floorTilePos.X, floorTilePos.Y + 1), // Down
+                new Vector2I(floorTilePos.X - 1, floorTilePos.Y), // Left
+                new Vector2I(floorTilePos.X + 1, floorTilePos.Y)  // Right
+            };
+            
+            foreach (var neighborTilePos in neighbors)
+            {
+                if (!floorPositions.Contains(neighborTilePos) && !wallPositions.Contains(neighborTilePos))
+                {
+                    // This is a wall position that hasn't been placed yet
+                    WorldTileMap.SetCell(neighborTilePos, 0, wallTile);
+                    wallPositions.Add(neighborTilePos);
+                }
+            }
+        }
+    }
+
+    private void PlaceWallsAroundRoom(int startX, int startY, int width, int height, HashSet<Vector2I> floorPositions, HashSet<Vector2I> wallPositions)
+    {
+        // Place walls around the room's perimeter including corners
+        
+        // Top and bottom walls (including corners)
+        for (int x = startX - 1; x <= startX + width; x++)
+        {
+            // Top wall
+            Vector2I topPos = new Vector2I(x, startY - 1);
+            if (!floorPositions.Contains(topPos)) {
+                wallPositions.Add(topPos);
+            }
+            
+            // Bottom wall
+            Vector2I bottomPos = new Vector2I(x, startY + height);
+            if (!floorPositions.Contains(bottomPos)) {
+                wallPositions.Add(bottomPos);
+            }
+        }
+        
+        // Left and right walls (excluding corners which were handled above)
+        for (int y = startY; y < startY + height; y++)
+        {
+            // Left wall
+            Vector2I leftPos = new Vector2I(startX - 1, y);
+            if (!floorPositions.Contains(leftPos)) {
+                wallPositions.Add(leftPos);
+            }
+            
+            // Right wall
+            Vector2I rightPos = new Vector2I(startX + width, y);
+            if (!floorPositions.Contains(rightPos)) {
+                wallPositions.Add(rightPos);
+            }
+        }
     }
 }
