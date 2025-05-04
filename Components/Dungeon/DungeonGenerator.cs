@@ -411,7 +411,26 @@ public partial class DungeonGenerator : Node2D
         HashSet<Vector2I> floorPositions = new HashSet<Vector2I>();
         HashSet<Vector2I> wallPositions = new HashSet<Vector2I>();
         
-        // Add all room and corridor tiles to the floor positions
+        // NEW: Track corridor positions to detect where hallways meet rooms
+        HashSet<Vector2I> corridorPositions = new HashSet<Vector2I>();
+        
+        // First pass: identify main rooms and corridor cells
+        List<Rect2I> mainRooms = new List<Rect2I>();
+        List<Rect2I> corridorCells = new List<Rect2I>();
+        
+        foreach (var room in _rooms)
+        {
+            if (IsCorridorCell(room))
+            {
+                corridorCells.Add(room);
+            }
+            else
+            {
+                mainRooms.Add(room);
+            }
+        }
+        
+        // Second pass: add all room and corridor tiles to the floor positions
         foreach (var room in _rooms)
         {
             // Convert pixel coordinates to tile coordinates
@@ -425,12 +444,47 @@ public partial class DungeonGenerator : Node2D
             {
                 for (int tileX = startTileX; tileX < startTileX + widthInTiles; tileX++)
                 {
-                    floorPositions.Add(new Vector2I(tileX, tileY));
+                    Vector2I tilePos = new Vector2I(tileX, tileY);
+                    floorPositions.Add(tilePos);
+                    
+                    // Mark corridor tiles for later corridor opening detection
+                    if (IsCorridorCell(room))
+                    {
+                        corridorPositions.Add(tilePos);
+                    }
                 }
             }
             
-            // Place walls around this room's perimeter
-            PlaceWallsAroundRoom(startTileX, startTileY, widthInTiles, heightInTiles, floorPositions, wallPositions);
+            // Only place walls around main rooms, not corridor cells
+            if (!IsCorridorCell(room))
+            {
+                PlaceWallsAroundRoom(startTileX, startTileY, widthInTiles, heightInTiles, floorPositions, wallPositions);
+            }
+        }
+        
+        // NEW: Find walls that should be corridor openings
+        List<Vector2I> wallsToRemove = new List<Vector2I>();
+        HashSet<Vector2I> openingsToAdd = new HashSet<Vector2I>();
+        
+        foreach (var wallPos in wallPositions)
+        {
+            if (ShouldBeCorridorOpening(wallPos, floorPositions, corridorPositions))
+            {
+                wallsToRemove.Add(wallPos);
+                openingsToAdd.Add(wallPos);
+            }
+        }
+        
+        // Remove walls that should be openings
+        foreach (var wallPos in wallsToRemove)
+        {
+            wallPositions.Remove(wallPos);
+        }
+        
+        // Add as floor tiles
+        foreach (var openingPos in openingsToAdd)
+        {
+            floorPositions.Add(openingPos);
         }
         
         // Place floor tiles
@@ -445,7 +499,7 @@ public partial class DungeonGenerator : Node2D
             WorldTileMap.SetCell(wallPos, 0, wallTile);
         }
         
-        // Additionally check for any corridor areas that need walls
+        // Final pass: check for any corridor areas that need walls
         foreach (var floorTilePos in floorPositions)
         {
             // Check orthogonal neighbors (up, down, left, right)
@@ -466,6 +520,32 @@ public partial class DungeonGenerator : Node2D
                 }
             }
         }
+    }
+
+    // Identify if a cell is a corridor cell (small cell)
+    private bool IsCorridorCell(Rect2I cell)
+    {
+        // Corridor cells are typically small, single-tile cells
+        // Use the same criteria as in GeneratorVisualizer.IsCorridorCell
+        int minWidthInPixels = 6 * TileSize;
+        int minHeightInPixels = 6 * TileSize;
+        
+        // Check if this is a corridor cell (small) vs a main room (large)
+        bool isSmallCell = cell.Size.X < minWidthInPixels || cell.Size.Y < minHeightInPixels;
+        
+        // Also check if this was one of the original main rooms
+        bool isOriginalRoom = false;
+        foreach (var originalRoomCenter in _roomCenters)
+        {
+            // Check if this center falls within the cell
+            if (cell.HasPoint(originalRoomCenter))
+            {
+                isOriginalRoom = true;
+                break;
+            }
+        }
+        
+        return isSmallCell && !isOriginalRoom;
     }
 
     private void PlaceWallsAroundRoom(int startX, int startY, int width, int height, HashSet<Vector2I> floorPositions, HashSet<Vector2I> wallPositions)
@@ -503,5 +583,43 @@ public partial class DungeonGenerator : Node2D
                 wallPositions.Add(rightPos);
             }
         }
+    }
+
+    // Add this new helper method to detect corridor openings
+    private bool ShouldBeCorridorOpening(Vector2I wallPos, HashSet<Vector2I> floorPositions, HashSet<Vector2I> corridorPositions)
+    {
+        // A position should be a corridor opening if it's adjacent to both:
+        // 1. A corridor floor tile
+        // 2. A non-corridor floor tile (main room)
+        
+        bool adjacentToCorridor = false;
+        bool adjacentToRoom = false;
+        
+        // Check all four adjacent positions
+        Vector2I[] adjacentPositions = {
+            new Vector2I(wallPos.X, wallPos.Y - 1), // Up
+            new Vector2I(wallPos.X, wallPos.Y + 1), // Down
+            new Vector2I(wallPos.X - 1, wallPos.Y), // Left
+            new Vector2I(wallPos.X + 1, wallPos.Y)  // Right
+        };
+        
+        foreach (var adjPos in adjacentPositions)
+        {
+            if (floorPositions.Contains(adjPos))
+            {
+                if (corridorPositions.Contains(adjPos))
+                {
+                    adjacentToCorridor = true;
+                }
+                else
+                {
+                    adjacentToRoom = true;
+                }
+            }
+        }
+        
+        // This wall should be a corridor opening if it's adjacent to both
+        // a corridor tile and a main room tile
+        return adjacentToCorridor && adjacentToRoom;
     }
 }

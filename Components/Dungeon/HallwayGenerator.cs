@@ -5,7 +5,7 @@ using System.Collections.Generic;
 public partial class HallwayGenerator : Node2D
 {
     [Export] public int TileSize = 16;
-    [Export] public int HallwayWidth = 4; // Width of hallways in tiles
+    [Export] public int HallwayWidth = 2; // Width of hallways in tiles
     private RandomNumberGenerator _rng = new RandomNumberGenerator();
     
     public override void _Ready()
@@ -111,7 +111,7 @@ public partial class HallwayGenerator : Node2D
     private List<Rect2I> ApplyCorridorBetweenPoints(List<Rect2I> cells, List<Rect2I> rooms, Vector2I start, Vector2I end)
     {
         List<Rect2I> result = new List<Rect2I>(rooms);
-        int brushRadius = (HallwayWidth * TileSize) / 2; // Half width of our 3-tile corridor
+        int brushRadius = (HallwayWidth * TileSize) / 2; // Half width of our 2-tile corridor
         
         // Step 1: Find all cells that intersect with this corridor line or are within the brush radius
         foreach (Rect2I cell in cells)
