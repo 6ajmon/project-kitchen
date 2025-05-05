@@ -17,7 +17,4 @@ zoomSpeed = 0.05
 minZoom = 0.001
 
 [node name="DungeonGenerator" parent="." instance=ExtResource("8_ynnps")]
-NumberOfCells = 64
-LargestRoomsPercent = 0.25
-LoopPercent = 0.125
-VisualizationStepDelay = 0.01
+Seed = 111111

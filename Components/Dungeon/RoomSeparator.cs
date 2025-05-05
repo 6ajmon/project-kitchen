@@ -5,10 +5,11 @@ using System.Threading.Tasks;
 
 public partial class RoomSeparator : Node2D
 {
-    [Export] public int TileSize = 16;
-    [Export] public float SimulationTimeout = 10.0f; // Maximum time to run simulation
-    [Export] public float PhysicsTimeScale = 0.1f; // Controls the speed of physics simulation (lower = slower)
+    public int TileSize = 16;
+    public float SimulationTimeout = 10.0f; // Maximum time to run simulation
+    public float PhysicsTimeScale = 0.1f; // Controls the speed of physics simulation (lower = slower)
 
+    private RandomNumberGenerator _rng = new RandomNumberGenerator(); // Add RNG instance
     private List<RigidBody2D> _physicsBodies = new List<RigidBody2D>();
     private bool _simulationRunning = false;
     private float _simulationTimer = 0.0f;
@@ -16,18 +17,6 @@ public partial class RoomSeparator : Node2D
     private TaskCompletionSource<bool> _simulationComplete;
     private float _stableTimer = 0;
     private float _physicsStepAccumulator = 0f;
-
-    public List<Rect2I> SeparateCells(List<Rect2I> cells, int iterations)
-    {
-        // Start the physics-based separation
-        var task = SeparateCellsWithPhysics(cells);
-        
-        // Wait for the task to complete (blocking call)
-        task.Wait();
-        
-        // Return the result
-        return task.Result;
-    }
     
     public async Task<List<Rect2I>> SeparateCellsWithPhysics(List<Rect2I> cells)
     {
@@ -56,6 +45,11 @@ public partial class RoomSeparator : Node2D
         return result;
     }
     
+    public void SetSeed(int seed)
+    {
+        _rng.Seed = (ulong)seed;
+    }
+
     private void CreatePhysicsBodies(List<Rect2I> cells)
     {
         foreach (var cell in cells)
@@ -74,14 +68,14 @@ public partial class RoomSeparator : Node2D
             
             // Add more initial energy to make movement more visible
             body.LinearVelocity = new Vector2(
-                (float)GD.RandRange(-10, 10),
-                (float)GD.RandRange(-10, 10)
+                (float)_rng.RandfRange(-10, 10),
+                (float)_rng.RandfRange(-10, 10)
             );
             
-            // Create collision shape matching cell size
+            // Create collision shape with expanded size (1 tile bigger in each direction)
             CollisionShape2D shape = new CollisionShape2D();
             RectangleShape2D rectShape = new RectangleShape2D();
-            rectShape.Size = new Vector2(cell.Size.X, cell.Size.Y);
+            rectShape.Size = new Vector2(cell.Size.X + TileSize * 2, cell.Size.Y + TileSize * 2);
             shape.Shape = rectShape;
             
             // Add collision shape to body
@@ -93,6 +87,7 @@ public partial class RoomSeparator : Node2D
             
             // Store original rect dimensions for later reference
             body.SetMeta("original_size", new Vector2(cell.Size.X, cell.Size.Y));
+            body.SetMeta("physics_size", new Vector2(cell.Size.X + TileSize * 2, cell.Size.Y + TileSize * 2));
         }
     }
     
@@ -107,7 +102,7 @@ public partial class RoomSeparator : Node2D
             Vector2 position = body.Position;
             Vector2 originalSize = (Vector2)body.GetMeta("original_size");
             
-            // Calculate top-left corner
+            // Calculate top-left corner (compensating for the expanded physics body)
             Vector2 topLeft = position - originalSize / 2;
             
             // Ensure grid alignment
@@ -135,7 +130,7 @@ public partial class RoomSeparator : Node2D
             Vector2 position = body.Position;
             Vector2 originalSize = (Vector2)body.GetMeta("original_size");
             
-            // Calculate the top-left corner
+            // Calculate the top-left corner (using original size, not expanded physics size)
             Vector2 topLeft = position - originalSize / 2;
             
             // Ensure grid alignment
@@ -193,8 +188,8 @@ public partial class RoomSeparator : Node2D
             {
                 // Apply a small random force to keep things moving
                 body.ApplyCentralImpulse(new Vector2(
-                    (float)GD.RandRange(-1.0, 1.0) * 0.5f,
-                    (float)GD.RandRange(-1.0, 1.0) * 0.5f
+                    (float)_rng.RandfRange(-1.0f, 1.0f) * 0.5f,
+                    (float)_rng.RandfRange(-1.0f, 1.0f) * 0.5f
                 ));
             }
         }
@@ -251,80 +246,6 @@ public partial class RoomSeparator : Node2D
             EmitSignal("SimulationCompleted");
             _simulationRunning = false;
         }
-    }
-    
-    // Modified to take iteration count as parameter
-    public List<Rect2I> SeparateCellsStep(List<Rect2I> cells, int iterations)
-    {
-        List<Rect2I> result = new List<Rect2I>(cells);
-        
-        // Run separation algorithm for specified number of iterations
-        for (int iter = 0; iter < iterations; iter++)
-        {
-            bool anyCellMoved = false;
-            
-            for (int i = 0; i < result.Count; i++)
-            {
-                Vector2I moveVector = Vector2I.Zero;
-                Rect2I cellA = result[i];
-                
-                for (int j = 0; j < result.Count; j++)
-                {
-                    if (i == j) continue;
-                    
-                    Rect2I cellB = result[j];
-                    
-                    if (cellA.Intersects(cellB))
-                    {
-                        // Calculate overlap and push direction
-                        int overlapX = Math.Min(
-                            cellA.Position.X + cellA.Size.X - cellB.Position.X,
-                            cellB.Position.X + cellB.Size.X - cellA.Position.X
-                        );
-                        
-                        int overlapY = Math.Min(
-                            cellA.Position.Y + cellA.Size.Y - cellB.Position.Y,
-                            cellB.Position.Y + cellB.Size.Y - cellA.Position.Y
-                        );
-                        
-                        // Determine which axis has the smallest overlap
-                        if (overlapX < overlapY)
-                        {
-                            int dir = (cellA.Position.X + cellA.Size.X / 2) < (cellB.Position.X + cellB.Size.X / 2) ? -1 : 1;
-                            moveVector.X += dir * (overlapX / 2 + TileSize);
-                        }
-                        else
-                        {
-                            int dir = (cellA.Position.Y + cellA.Size.Y / 2) < (cellB.Position.Y + cellB.Size.Y / 2) ? -1 : 1;
-                            moveVector.Y += dir * (overlapY / 2 + TileSize);
-                        }
-                    }
-                }
-                
-                // Apply movement to cell (maintain grid alignment)
-                if (moveVector != Vector2I.Zero)
-                {
-                    Vector2I newPosition = cellA.Position + moveVector;
-                    
-                    // Ensure grid alignment
-                    newPosition.X = (newPosition.X / TileSize) * TileSize;
-                    newPosition.Y = (newPosition.Y / TileSize) * TileSize;
-                    
-                    result[i] = new Rect2I(
-                        newPosition,
-                        cellA.Size
-                    );
-                    
-                    anyCellMoved = true;
-                }
-            }
-            
-            // If no cell moved in this iteration, we can stop early
-            if (!anyCellMoved)
-                break;
-        }
-        
-        return result;
     }
     
     [Signal]

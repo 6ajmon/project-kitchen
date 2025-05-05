@@ -5,8 +5,9 @@ using System.Linq;
 
 public partial class ExtraRoomDeterminator : Node2D
 {
-    [Export] public int TileSize = 16;
-    [Export] public float LargestExtraRoomsPercent = 1.0f;
+    public int TileSize = 16;
+    public float LargestExtraRoomsPercent = 1.0f;
+    public int NeighborDistance = 2; // Number of tiles to consider as "neighboring"
 
     public (List<Rect2I>, List<Vector2I>) DetermineExtraRooms(List<Rect2I> allCells, List<Rect2I> dungeonRooms)
     {
@@ -68,27 +69,46 @@ public partial class ExtraRoomDeterminator : Node2D
 
     private bool IsNeighboringDungeon(Rect2I cell, List<Rect2I> dungeonRooms)
     {
-        // Consider a cell neighboring if it's directly adjacent to any dungeon room
-        // (shares at least one tile edge, not just corners)
+        // Consider a cell neighboring if it's within a certain distance of the dungeon
+        // The distance is measured in tiles (NeighborDistance parameter)
+        int proximityThreshold = TileSize * NeighborDistance;
+        
+        // Convert to Rect2 for easier distance calculations
+        Rect2 cellRect = new Rect2(cell.Position.X, cell.Position.Y, cell.Size.X, cell.Size.Y);
         
         foreach (var room in dungeonRooms)
         {
-            // Check for horizontal adjacency (left or right side touching)
+            // Convert room to Rect2 as well
+            Rect2 roomRect = new Rect2(room.Position.X, room.Position.Y, room.Size.X, room.Size.Y);
+            
+            // Get the closest points between the two rectangles
+            Vector2 closestPointInCell = GetClosestPoint(cellRect, roomRect.GetCenter());
+            Vector2 closestPointInRoom = GetClosestPoint(roomRect, cellRect.GetCenter());
+            
+            // Calculate distance between closest points
+            float distance = closestPointInCell.DistanceTo(closestPointInRoom);
+            
+            // If the distance is within our threshold, consider it neighboring
+            if (distance <= proximityThreshold)
+            {
+                return true;
+            }
+            
+            // Also check if they're still directly adjacent (which might still happen sometimes)
             bool horizontallyAdjacent = 
-                // Cell's right edge touches room's left edge
-                (cell.Position.X + cell.Size.X == room.Position.X &&
+                // Cell's right edge touches or is near room's left edge
+                (Math.Abs(cell.Position.X + cell.Size.X - room.Position.X) <= proximityThreshold &&
                  HasVerticalOverlap(cell, room)) ||
-                // Cell's left edge touches room's right edge
-                (cell.Position.X == room.Position.X + room.Size.X &&
+                // Cell's left edge touches or is near room's right edge
+                (Math.Abs(cell.Position.X - (room.Position.X + room.Size.X)) <= proximityThreshold &&
                  HasVerticalOverlap(cell, room));
             
-            // Check for vertical adjacency (top or bottom side touching)
             bool verticallyAdjacent = 
-                // Cell's bottom edge touches room's top edge
-                (cell.Position.Y + cell.Size.Y == room.Position.Y &&
+                // Cell's bottom edge touches or is near room's top edge
+                (Math.Abs(cell.Position.Y + cell.Size.Y - room.Position.Y) <= proximityThreshold &&
                  HasHorizontalOverlap(cell, room)) ||
-                // Cell's top edge touches room's bottom edge
-                (cell.Position.Y == room.Position.Y + room.Size.Y &&
+                // Cell's top edge touches or is near room's bottom edge
+                (Math.Abs(cell.Position.Y - (room.Position.Y + room.Size.Y)) <= proximityThreshold &&
                  HasHorizontalOverlap(cell, room));
             
             if (horizontallyAdjacent || verticallyAdjacent)
@@ -96,6 +116,14 @@ public partial class ExtraRoomDeterminator : Node2D
         }
         
         return false;
+    }
+    
+    private Vector2 GetClosestPoint(Rect2 rect, Vector2 point)
+    {
+        // Find the closest point on/in the rectangle to the given point
+        float x = Mathf.Clamp(point.X, rect.Position.X, rect.Position.X + rect.Size.X);
+        float y = Mathf.Clamp(point.Y, rect.Position.Y, rect.Position.Y + rect.Size.Y);
+        return new Vector2(x, y);
     }
     
     private bool HasVerticalOverlap(Rect2I rect1, Rect2I rect2)

@@ -4,19 +4,65 @@ using System.Collections.Generic;
 
 public partial class DungeonGenerator : Node2D
 {
-    [Export] public int NumberOfCells = 150;
-    [Export] public float CellSpawnRadius = 20.0f;
-    [Export] public float LargestRoomsPercent = 0.3f;
-    [Export] public float LoopPercent = 0.1f;
-    [Export] public int TileSize = 16;
-    [Export] public float ExtraRoomsPercent = 1.0f;
+    [ExportGroup("Cell Generation")]
+    [Export(PropertyHint.None, "Random seed for dungeon generation (0 = random)")]
+    public int Seed = 0;
     
-    [Export] public TileMapLayer FloorLayer;
-    [Export] public TileMapLayer WallLayer;
+    [Export(PropertyHint.None, "Total number of cells to generate")]
+    public int NumberOfCells = 64;
     
-    [Export] public bool EnableVisualization = true;
-    [Export] public float VisualizationStepDelay = 0.5f;
-    [Export] public float PhysicsTimeScale = 0.1f; // Slower physics simulation for better visualization
+    [Export(PropertyHint.None, "Radius for cell generation when using circular distribution")]
+    public float CellSpawnRadius = 20.0f;
+    
+    [Export(PropertyHint.None, "X-axis radius for elliptical cell distribution")]
+    public float CellSpawnRadiusX = 60.0f;
+    
+    [Export(PropertyHint.None, "Y-axis radius for elliptical cell distribution")]
+    public float CellSpawnRadiusY = 10.0f;
+    
+    [ExportGroup("Room Determination")]
+    [Export(PropertyHint.Range, "0,1,0.01")]
+    public float LargestRoomsPercent = 0.25f; // What percentage of largest cells become rooms
+    
+    [ExportGroup("Corridors & Extra Rooms")]
+    [Export(PropertyHint.Range, "0,1,0.01")]
+    public float LoopPercent = 0.25f; // Percentage of non-MST edges to add as loops
+    
+    [Export(PropertyHint.Range, "0,1,0.01")]
+    public float ExtraRoomsPercent = 1.0f; // What percentage of neighboring cells become extra rooms
+    
+    [Export(PropertyHint.Range, "1,10,1")]
+    public int HallwayWidth = 2; // Width of hallways in tiles
+    
+    [Export(PropertyHint.Range, "1,10,1")]
+    public int NeighborDistance = 2; // Number of tiles to consider as "neighboring" for extra rooms
+    
+    [ExportGroup("Tile Settings")]
+    [Export(PropertyHint.None, "Size of each tile in pixels")]
+    public int TileSize = 16;
+    
+    [Export(PropertyHint.None, "Atlas coordinates for floor tiles")]
+    public Vector2I FloorAtlasCoord = new Vector2I(1, 0);
+    
+    [Export(PropertyHint.None, "Atlas coordinates for wall tiles")]
+    public Vector2I WallAtlasCoord = new Vector2I(0, 0);
+    
+    [ExportGroup("Tilemaps")]
+    [Export(PropertyHint.None, "The tilemap for collision/gameplay")]
+    public TileMapLayer WorldTileMap;
+    
+    [Export(PropertyHint.None, "The tilemap for visual display")]
+    public TileMapLayer DisplayTileMap;
+    
+    [ExportGroup("Visualization")]
+    [Export(PropertyHint.None, "Whether to visualize the generation process")]
+    public bool EnableVisualization = true;
+    
+    [Export(PropertyHint.Range, "0.1,2.0,0.1")]
+    public float VisualizationStepDelay = 0.5f; // Delay between visualization steps
+    
+    [Export(PropertyHint.Range, "0.001,0.5,0.001")]
+    public float PhysicsTimeScale = 0.02f; // Physics simulation speed (lower = slower)
     
     private RandomNumberGenerator _rng = new RandomNumberGenerator();
     private List<Rect2I> _cells = new List<Rect2I>();
@@ -34,6 +80,7 @@ public partial class DungeonGenerator : Node2D
     private HallwayGenerator _hallwayGenerator;
     private GeneratorVisualizer _visualizer;
     private ExtraRoomDeterminator _extraRoomDeterminator;
+    private DungeonRenderer _dungeonRenderer;
     
     public enum GenerationState
     {
@@ -55,10 +102,18 @@ public partial class DungeonGenerator : Node2D
     
     public override void _Ready()
     {
-        _rng.Randomize();
+        // Initialize RNG with seed
+        if (Seed == 0)
+        {
+            // Generate a random seed if none provided
+            Seed = (int)DateTime.Now.Ticks;
+        }
+        
+        _rng.Seed = (ulong)Seed;
+        GD.Print($"Using seed: {Seed}");
         
         // Ensure we have valid layers
-        if (FloorLayer == null || WallLayer == null)
+        if (WorldTileMap == null || DisplayTileMap == null)
         {
             GD.PrintErr("Floor or Wall layer not assigned. Please assign them in the Inspector.");
             return;
@@ -74,9 +129,8 @@ public partial class DungeonGenerator : Node2D
         }
         else
         {
-            // Generate immediately without visualization
-            GenerateDungeon();
-            RenderDungeon();
+            // Start non-visualized generation but still use async approach
+            StartNonVisualizedGeneration();
         }
     }
     
@@ -87,11 +141,15 @@ public partial class DungeonGenerator : Node2D
         _roomGenerator.TileSize = TileSize;
         _roomGenerator.NumberOfCells = NumberOfCells;
         _roomGenerator.CellSpawnRadius = CellSpawnRadius;
+        _roomGenerator.CellSpawnRadiusX = CellSpawnRadiusX;
+        _roomGenerator.CellSpawnRadiusY = CellSpawnRadiusY;
+        _roomGenerator.SetSeed(Seed); // Pass the seed
         
         // Initialize room separator
         _roomSeparator = GetNode<RoomSeparator>("RoomSeparator");
         _roomSeparator.TileSize = TileSize;
         _roomSeparator.PhysicsTimeScale = PhysicsTimeScale; // Set slower physics simulation
+        _roomSeparator.SetSeed(Seed); // Pass the seed
         
         // Initialize room determinator
         _roomDeterminator = GetNode<MainRoomDeterminator>("MainRoomDeterminator");
@@ -101,21 +159,41 @@ public partial class DungeonGenerator : Node2D
         // Initialize graph generator
         _graphGenerator = GetNode<GraphGenerator>("GraphGenerator");
         _graphGenerator.LoopPercent = LoopPercent; // Pass the loop percentage from the main generator
+        _graphGenerator.SetSeed(Seed); // Pass the seed
         
         // Initialize hallway generator
         _hallwayGenerator = GetNode<HallwayGenerator>("HallwayGenerator"); 
         _hallwayGenerator.TileSize = TileSize;
+        _hallwayGenerator.HallwayWidth = HallwayWidth;
+        _hallwayGenerator.SetSeed(Seed); // Pass the seed
         
         // Initialize extra room determinator
         _extraRoomDeterminator = GetNode<ExtraRoomDeterminator>("ExtraRoomDeterminator");
         _extraRoomDeterminator.TileSize = TileSize;
         _extraRoomDeterminator.LargestExtraRoomsPercent = ExtraRoomsPercent;
+        _extraRoomDeterminator.NeighborDistance = NeighborDistance;
+    
+        // Initialize dungeonRenderer
+        _dungeonRenderer = GetNode<DungeonRenderer>("DungeonRenderer");
+        _dungeonRenderer.TileSize = TileSize;
+        _dungeonRenderer.FloorAtlasCoord = FloorAtlasCoord;
+        _dungeonRenderer.WallAtlasCoord = WallAtlasCoord;
+        _dungeonRenderer.WorldTileMap = WorldTileMap;
+        _dungeonRenderer.DisplayTileMap = DisplayTileMap;
         
         // Initialize visualizer if needed
         if (EnableVisualization)
         {
             _visualizer = GetNode<GeneratorVisualizer>("GeneratorVisualizer");
             _visualizer.TileSize = TileSize;
+        }
+        
+        // Initialize tile placer
+        TilePlacer tilePlacer = GetNode<TilePlacer>("TilePlacer");
+        if (tilePlacer != null)
+        {
+            tilePlacer.FloorAtlasCoord = FloorAtlasCoord;
+            tilePlacer.WallAtlasCoord = WallAtlasCoord;
         }
     }
     
@@ -283,14 +361,25 @@ public partial class DungeonGenerator : Node2D
         GD.Print("Physics-based separation complete. Determining rooms...");
     }
     
-    private void GenerateDungeon()
+    private void StartNonVisualizedGeneration()
     {
-        // Step 1: Generate random cells
+        _currentState = GenerationState.GeneratingCells;
         _cells = _roomGenerator.GenerateCells();
         
-        // Step 2: Separate cells using iterative method instead of physics when visualization is disabled
-        _cells = _roomSeparator.SeparateCellsStep(_cells, 100); // Use step-based separation instead of physics
+        // Use physics-based separation but don't block the main thread
+        var task = _roomSeparator.SeparateCellsWithPhysics(_cells);
+        task.ContinueWith(t => 
+        {
+            _cells = t.Result;
+            // Signal that generation should continue
+            CallDeferred("_CompleteNonVisualizedGeneration");
+        });
         
+        GD.Print("Started non-visualized dungeon generation...");
+    }
+
+    private void _CompleteNonVisualizedGeneration()
+    {
         // Step 3: Determine which cells are rooms
         (_rooms, _roomCenters) = _roomDeterminator.DetermineRooms(_cells);
         
@@ -317,153 +406,18 @@ public partial class DungeonGenerator : Node2D
         
         // Step 6: Find potential extra rooms that can be added later
         (_extraRooms, _extraRoomCenters) = _extraRoomDeterminator.DetermineExtraRooms(_cells, _rooms);
-    }
-    
-    // Method to add an extra room to the dungeon during gameplay
-    public bool AddExtraRoom(int extraRoomIndex)
-    {
-        if (extraRoomIndex < 0 || extraRoomIndex >= _extraRooms.Count)
-        {
-            GD.PrintErr($"Invalid extra room index: {extraRoomIndex}");
-            return false;
-        }
         
-        // Get the room to add
-        Rect2I roomToAdd = _extraRooms[extraRoomIndex];
-        Vector2I centerToAdd = _extraRoomCenters[extraRoomIndex];
-        
-        // Find closest dungeon room to connect to
-        int closestRoomIndex = FindClosestRoom(centerToAdd);
-        if (closestRoomIndex < 0)
-        {
-            GD.PrintErr("Couldn't find a valid room to connect to");
-            return false;
-        }
-        
-        // Add to main rooms
-        int newRoomIndex = _rooms.Count;
-        _rooms.Add(roomToAdd);
-        _roomCenters.Add(centerToAdd);
-        
-        // Create a corridor from the extra room to the closest dungeon room
-        List<(int, int)> newConnection = new List<(int, int)> { (newRoomIndex, closestRoomIndex) };
-        _rooms = _hallwayGenerator.CreateCorridors(_cells, _rooms, _roomCenters, newConnection);
-        
-        // Remove from extra rooms list
-        _extraRooms.RemoveAt(extraRoomIndex);
-        _extraRoomCenters.RemoveAt(extraRoomIndex);
-        
-        // Update dungeon rendering
+        // Final step: Render the dungeon
         RenderDungeon();
+        _currentState = GenerationState.Complete;
         
-        GD.Print($"Added extra room to the dungeon, connected to room {closestRoomIndex}");
-        return true;
+        GD.Print("Non-visualized dungeon generation complete!");
     }
     
-    private int FindClosestRoom(Vector2I point)
-    {
-        if (_roomCenters.Count == 0)
-            return -1;
-            
-        int closestIndex = 0;
-        float minDistance = float.MaxValue;
-        
-        for (int i = 0; i < _roomCenters.Count; i++)
-        {
-            float distance = (_roomCenters[i] - point).LengthSquared();
-            if (distance < minDistance)
-            {
-                minDistance = distance;
-                closestIndex = i;
-            }
-        }
-        
-        return closestIndex;
-    }
-    
-    // Returns the number of available extra rooms
-    public int GetExtraRoomCount()
-    {
-        return _extraRooms.Count;
-    }
-    
-    // Get extra room information for UI or gameplay logic
-    public List<(Rect2I room, Vector2I center)> GetExtraRooms()
-    {
-        List<(Rect2I, Vector2I)> result = new List<(Rect2I, Vector2I)>();
-        for (int i = 0; i < _extraRooms.Count; i++)
-        {
-            result.Add((_extraRooms[i], _extraRoomCenters[i]));
-        }
-        return result;
-    }
     
     private void RenderDungeon()
     {
-        // Clear existing tiles
-        FloorLayer.Clear();
-        WallLayer.Clear();
-        
-        // First place floor tiles for rooms and corridors
-        foreach (Rect2I room in _rooms)
-        {
-            // Convert room coordinates to tile coordinates
-            Vector2I topLeft = new Vector2I(
-                room.Position.X / TileSize,
-                room.Position.Y / TileSize
-            );
-            
-            Vector2I bottomRight = new Vector2I(
-                (room.Position.X + room.Size.X) / TileSize,
-                (room.Position.Y + room.Size.Y) / TileSize
-            );
-            
-            // Place floor tiles
-            for (int x = topLeft.X; x < bottomRight.X; x++)
-            {
-                for (int y = topLeft.Y; y < bottomRight.Y; y++)
-                {
-                    FloorLayer.SetCell(new Vector2I(x, y), 0, new Vector2I(0, 0), 0);
-                }
-            }
-        }
-        
-        // Then place wall tiles around floor tiles
-        int searchRadius = (int)(CellSpawnRadius * 2);
-        for (int x = -searchRadius; x < searchRadius; x++)
-        {
-            for (int y = -searchRadius; y < searchRadius; y++)
-            {
-                Vector2I pos = new Vector2I(x, y);
-                
-                // If this position doesn't have a floor
-                if (FloorLayer.GetCellSourceId(pos) == -1)
-                {
-                    // Check if any adjacent cell has a floor
-                    bool adjacentToFloor = false;
-                    for (int dx = -1; dx <= 1; dx++)
-                    {
-                        for (int dy = -1; dy <= 1; dy++)
-                        {
-                            if (dx == 0 && dy == 0) continue;
-                            
-                            Vector2I checkPos = pos + new Vector2I(dx, dy);
-                            if (FloorLayer.GetCellSourceId(checkPos) != -1)
-                            {
-                                adjacentToFloor = true;
-                                break;
-                            }
-                        }
-                        if (adjacentToFloor) break;
-                    }
-                    
-                    // If adjacent to floor, place a wall
-                    if (adjacentToFloor)
-                    {
-                        WallLayer.SetCell(pos, 1, new Vector2I(0, 0), 0);
-                    }
-                }
-            }
-        }
+        // Use the DungeonRenderer to render the dungeon
+        _dungeonRenderer.RenderDungeon(_cells, _rooms, _roomCenters, new List<Vector2I>());
     }
 }

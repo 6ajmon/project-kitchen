@@ -5,7 +5,7 @@ using System.Linq;
 
 public partial class GraphGenerator : Node2D
 {
-    [Export] public float LoopPercent = 0.1f; // Reduced from 0.15f to 0.1f (10%) for better dungeon layouts
+    public float LoopPercent = 0.1f; // Reduced from 0.15f to 0.1f (10%) for better dungeon layouts
     
     private RandomNumberGenerator _rng = new RandomNumberGenerator();
     private List<(int, int, float)> _allEdges = new List<(int, int, float)>();
@@ -37,18 +37,6 @@ public partial class GraphGenerator : Node2D
         {
             return (P1 == other.P1 && P2 == other.P2);
         }
-
-        public override bool Equals(object obj)
-        {
-            if (obj is Edge edge)
-                return Equals(edge);
-            return false;
-        }
-
-        public override int GetHashCode()
-        {
-            return P1.GetHashCode() ^ P2.GetHashCode();
-        }
     }
 
     private class Triangle
@@ -75,11 +63,6 @@ public partial class GraphGenerator : Node2D
             
             // Calculate squared radius
             RadiusSquared = (CircumCenter - pointA).LengthSquared();
-        }
-        
-        public bool ContainsVertex(int v)
-        {
-            return v == A || v == B || v == C;
         }
         
         public bool CircumCircleContains(Vector2I point, List<Vector2I> points)
@@ -130,7 +113,12 @@ public partial class GraphGenerator : Node2D
     
     public override void _Ready()
     {
-        _rng.Randomize();
+        // Don't randomize in _Ready, we'll use SetSeed
+    }
+    
+    public void SetSeed(int seed)
+    {
+        _rng.Seed = (ulong)seed;
     }
     
     public List<(int, int)> GenerateDelaunayTriangulation(List<Vector2I> points)
