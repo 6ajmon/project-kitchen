@@ -459,6 +459,9 @@ public partial class DungeonGenerator : Node2D
             }
         }
         
+        // Calculate the bounding box that contains all cells
+        Rect2I boundingBox = CalculateDungeonBoundingBox(_cells);
+        
         // Second pass: add all room and corridor tiles to the floor positions
         foreach (var room in _rooms)
         {
@@ -490,6 +493,9 @@ public partial class DungeonGenerator : Node2D
                 PlaceWallsAroundRoom(startTileX, startTileY, widthInTiles, heightInTiles, floorPositions, wallPositions);
             }
         }
+        
+        // NEW: Fill empty tiles with walls in the bounding box
+        FillEmptySpacesWithWalls(boundingBox, floorPositions, wallPositions);
         
         // NEW: Find walls that should be corridor openings
         List<Vector2I> wallsToRemove = new List<Vector2I>();
@@ -550,8 +556,59 @@ public partial class DungeonGenerator : Node2D
             }
         }
         
-        // NEW: Update display tiles using the TilePlacer
+        // Update display tiles using the TilePlacer
         GetNode<TilePlacer>("TilePlacer").UpdateDisplayTiles(WorldTileMap, DisplayTileMap);
+    }
+    
+    // Add new helper methods to calculate bounding box and fill empty spaces
+    private Rect2I CalculateDungeonBoundingBox(List<Rect2I> cells)
+    {
+        if (cells.Count == 0)
+            return new Rect2I(0, 0, 0, 0);
+            
+        // Find min and max coordinates to determine bounds
+        int minX = int.MaxValue;
+        int minY = int.MaxValue;
+        int maxX = int.MinValue;
+        int maxY = int.MinValue;
+        
+        foreach (var cell in cells)
+        {
+            minX = Math.Min(minX, cell.Position.X);
+            minY = Math.Min(minY, cell.Position.Y);
+            maxX = Math.Max(maxX, cell.Position.X + cell.Size.X);
+            maxY = Math.Max(maxY, cell.Position.Y + cell.Size.Y);
+        }
+        
+        // Convert to tile coordinates and add padding (1 tile on each side)
+        int borderPadding = 1;
+        int startTileX = (minX / TileSize) - borderPadding;
+        int startTileY = (minY / TileSize) - borderPadding;
+        int endTileX = Mathf.CeilToInt((float)maxX / TileSize) + borderPadding;
+        int endTileY = Mathf.CeilToInt((float)maxY / TileSize) + borderPadding;
+        
+        int widthInTiles = endTileX - startTileX;
+        int heightInTiles = endTileY - startTileY;
+        
+        return new Rect2I(startTileX, startTileY, widthInTiles, heightInTiles);
+    }
+    
+    private void FillEmptySpacesWithWalls(Rect2I boundingBox, HashSet<Vector2I> floorPositions, HashSet<Vector2I> wallPositions)
+    {
+        // Iterate through every tile position in the bounding box
+        for (int tileY = boundingBox.Position.Y; tileY < boundingBox.Position.Y + boundingBox.Size.Y; tileY++)
+        {
+            for (int tileX = boundingBox.Position.X; tileX < boundingBox.Position.X + boundingBox.Size.X; tileX++)
+            {
+                Vector2I tilePos = new Vector2I(tileX, tileY);
+                
+                // If the position is not already a floor or wall, make it a wall
+                if (!floorPositions.Contains(tilePos) && !wallPositions.Contains(tilePos))
+                {
+                    wallPositions.Add(tilePos);
+                }
+            }
+        }
     }
 
     // Identify if a cell is a corridor cell (small cell)

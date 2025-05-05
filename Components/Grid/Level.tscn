@@ -21,5 +21,4 @@ NumberOfCells = 64
 LargestRoomsPercent = 0.25
 LoopPercent = 0.125
 Seed = 111111
-EnableVisualization = false
 VisualizationStepDelay = 0.01
