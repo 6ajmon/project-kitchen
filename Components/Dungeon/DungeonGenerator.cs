@@ -549,6 +549,9 @@ public partial class DungeonGenerator : Node2D
                 }
             }
         }
+        
+        // NEW: Update display tiles using the TilePlacer
+        GetNode<TilePlacer>("TilePlacer").UpdateDisplayTiles(WorldTileMap, DisplayTileMap);
     }
 
     // Identify if a cell is a corridor cell (small cell)
