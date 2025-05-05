@@ -9,6 +9,7 @@ public partial class RoomSeparator : Node2D
     [Export] public float SimulationTimeout = 10.0f; // Maximum time to run simulation
     [Export] public float PhysicsTimeScale = 0.1f; // Controls the speed of physics simulation (lower = slower)
 
+    private RandomNumberGenerator _rng = new RandomNumberGenerator(); // Add RNG instance
     private List<RigidBody2D> _physicsBodies = new List<RigidBody2D>();
     private bool _simulationRunning = false;
     private float _simulationTimer = 0.0f;
@@ -56,6 +57,11 @@ public partial class RoomSeparator : Node2D
         return result;
     }
     
+    public void SetSeed(int seed)
+    {
+        _rng.Seed = (ulong)seed;
+    }
+
     private void CreatePhysicsBodies(List<Rect2I> cells)
     {
         foreach (var cell in cells)
@@ -74,8 +80,8 @@ public partial class RoomSeparator : Node2D
             
             // Add more initial energy to make movement more visible
             body.LinearVelocity = new Vector2(
-                (float)GD.RandRange(-10, 10),
-                (float)GD.RandRange(-10, 10)
+                (float)_rng.RandfRange(-10, 10),
+                (float)_rng.RandfRange(-10, 10)
             );
             
             // Create collision shape with expanded size (1 tile bigger in each direction)
@@ -194,8 +200,8 @@ public partial class RoomSeparator : Node2D
             {
                 // Apply a small random force to keep things moving
                 body.ApplyCentralImpulse(new Vector2(
-                    (float)GD.RandRange(-1.0, 1.0) * 0.5f,
-                    (float)GD.RandRange(-1.0, 1.0) * 0.5f
+                    (float)_rng.RandfRange(-1.0f, 1.0f) * 0.5f,
+                    (float)_rng.RandfRange(-1.0f, 1.0f) * 0.5f
                 ));
             }
         }

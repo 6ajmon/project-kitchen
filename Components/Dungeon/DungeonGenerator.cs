@@ -10,6 +10,7 @@ public partial class DungeonGenerator : Node2D
     [Export] public float LoopPercent = 0.1f;
     [Export] public int TileSize = 16;
     [Export] public float ExtraRoomsPercent = 1.0f;
+    [Export] public int Seed = 0; // Add seed parameter, 0 means generate random seed
     
     [Export] public TileMapLayer WorldTileMap;
     [Export] public TileMapLayer DisplayTileMap;
@@ -55,7 +56,15 @@ public partial class DungeonGenerator : Node2D
     
     public override void _Ready()
     {
-        _rng.Randomize();
+        // Initialize RNG with seed
+        if (Seed == 0)
+        {
+            // Generate a random seed if none provided
+            Seed = (int)DateTime.Now.Ticks;
+        }
+        
+        _rng.Seed = (ulong)Seed;
+        GD.Print($"Using seed: {Seed}");
         
         // Ensure we have valid layers
         if (WorldTileMap == null || DisplayTileMap == null)
@@ -74,9 +83,8 @@ public partial class DungeonGenerator : Node2D
         }
         else
         {
-            // Generate immediately without visualization
-            GenerateDungeon();
-            RenderDungeon();
+            // Start non-visualized generation but still use async approach
+            StartNonVisualizedGeneration();
         }
     }
     
@@ -87,11 +95,13 @@ public partial class DungeonGenerator : Node2D
         _roomGenerator.TileSize = TileSize;
         _roomGenerator.NumberOfCells = NumberOfCells;
         _roomGenerator.CellSpawnRadius = CellSpawnRadius;
+        _roomGenerator.SetSeed(Seed); // Pass the seed
         
         // Initialize room separator
         _roomSeparator = GetNode<RoomSeparator>("RoomSeparator");
         _roomSeparator.TileSize = TileSize;
         _roomSeparator.PhysicsTimeScale = PhysicsTimeScale; // Set slower physics simulation
+        _roomSeparator.SetSeed(Seed); // Pass the seed
         
         // Initialize room determinator
         _roomDeterminator = GetNode<MainRoomDeterminator>("MainRoomDeterminator");
@@ -101,10 +111,12 @@ public partial class DungeonGenerator : Node2D
         // Initialize graph generator
         _graphGenerator = GetNode<GraphGenerator>("GraphGenerator");
         _graphGenerator.LoopPercent = LoopPercent; // Pass the loop percentage from the main generator
+        _graphGenerator.SetSeed(Seed); // Pass the seed
         
         // Initialize hallway generator
         _hallwayGenerator = GetNode<HallwayGenerator>("HallwayGenerator"); 
         _hallwayGenerator.TileSize = TileSize;
+        _hallwayGenerator.SetSeed(Seed); // Pass the seed
         
         // Initialize extra room determinator
         _extraRoomDeterminator = GetNode<ExtraRoomDeterminator>("ExtraRoomDeterminator");
@@ -283,14 +295,25 @@ public partial class DungeonGenerator : Node2D
         GD.Print("Physics-based separation complete. Determining rooms...");
     }
     
-    private void GenerateDungeon()
+    private void StartNonVisualizedGeneration()
     {
-        // Step 1: Generate random cells
+        _currentState = GenerationState.GeneratingCells;
         _cells = _roomGenerator.GenerateCells();
         
-        // Step 2: Separate cells using iterative method instead of physics when visualization is disabled
-        _cells = _roomSeparator.SeparateCellsStep(_cells, 100); // Use step-based separation instead of physics
+        // Use physics-based separation but don't block the main thread
+        var task = _roomSeparator.SeparateCellsWithPhysics(_cells);
+        task.ContinueWith(t => 
+        {
+            _cells = t.Result;
+            // Signal that generation should continue
+            CallDeferred("_CompleteNonVisualizedGeneration");
+        });
         
+        GD.Print("Started non-visualized dungeon generation...");
+    }
+
+    private void _CompleteNonVisualizedGeneration()
+    {
         // Step 3: Determine which cells are rooms
         (_rooms, _roomCenters) = _roomDeterminator.DetermineRooms(_cells);
         
@@ -317,6 +340,12 @@ public partial class DungeonGenerator : Node2D
         
         // Step 6: Find potential extra rooms that can be added later
         (_extraRooms, _extraRoomCenters) = _extraRoomDeterminator.DetermineExtraRooms(_cells, _rooms);
+        
+        // Final step: Render the dungeon
+        RenderDungeon();
+        _currentState = GenerationState.Complete;
+        
+        GD.Print("Non-visualized dungeon generation complete!");
     }
     
     // Method to add an extra room to the dungeon during gameplay

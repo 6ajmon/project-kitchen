@@ -10,7 +10,12 @@ public partial class HallwayGenerator : Node2D
     
     public override void _Ready()
     {
-        _rng.Randomize();
+        // Don't randomize in _Ready, we'll use SetSeed
+    }
+    
+    public void SetSeed(int seed)
+    {
+        _rng.Seed = (ulong)seed;
     }
     
     public List<Rect2I> CreateCorridors(List<Rect2I> cells, List<Rect2I> rooms, List<Vector2I> roomCenters, List<(int, int)> corridorEdges)
@@ -178,8 +183,8 @@ public partial class HallwayGenerator : Node2D
             end = temp;
         }
         
-        // Calculate the perpendicular range (half width on each side)
-        int halfWidth = corridorWidth / 2;
+         // Calculate the range to create exactly HallwayWidth tiles
+        int halfTiles = HallwayWidth / 2;
         
         if (isVertical) {
             // Vertical corridor: X is fixed, Y varies
@@ -188,8 +193,9 @@ public partial class HallwayGenerator : Node2D
             int centerX = start.X / TileSize;
             
             for (int y = startY; y <= endY; y++) {
-                // Draw corridor width
-                for (int xOffset = -halfWidth/TileSize; xOffset <= halfWidth/TileSize; xOffset++) {
+                // Draw corridor width - corrected to use proper width calculation
+                for (int offset = 0; offset < HallwayWidth; offset++) {
+                    int xOffset = offset - halfTiles;
                     // Create a small cell for this tile position
                     Vector2I cellPos = new Vector2I((centerX + xOffset) * TileSize, y * TileSize);
                     Rect2I cell = new Rect2I(cellPos, new Vector2I(TileSize, TileSize));
@@ -208,8 +214,9 @@ public partial class HallwayGenerator : Node2D
             int centerY = start.Y / TileSize;
             
             for (int x = startX; x <= endX; x++) {
-                // Draw corridor width
-                for (int yOffset = -halfWidth/TileSize; yOffset <= halfWidth/TileSize; yOffset++) {
+                // Draw corridor width - corrected to use proper width calculation
+                for (int offset = 0; offset < HallwayWidth; offset++) {
+                    int yOffset = offset - halfTiles;
                     // Create a small cell for this tile position
                     Vector2I cellPos = new Vector2I(x * TileSize, (centerY + yOffset) * TileSize);
                     Rect2I cell = new Rect2I(cellPos, new Vector2I(TileSize, TileSize));

@@ -130,7 +130,12 @@ public partial class GraphGenerator : Node2D
     
     public override void _Ready()
     {
-        _rng.Randomize();
+        // Don't randomize in _Ready, we'll use SetSeed
+    }
+    
+    public void SetSeed(int seed)
+    {
+        _rng.Seed = (ulong)seed;
     }
     
     public List<(int, int)> GenerateDelaunayTriangulation(List<Vector2I> points)
