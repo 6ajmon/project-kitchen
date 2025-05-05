@@ -18,4 +18,3 @@ minZoom = 0.001
 
 [node name="DungeonGenerator" parent="." instance=ExtResource("8_ynnps")]
 Seed = 111111
-EnableVisualization = false

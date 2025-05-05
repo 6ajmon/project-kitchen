@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3 uid="uid://btrd82av6j5pk"]
+[gd_scene load_steps=17 format=3 uid="uid://btrd82av6j5pk"]
 
 [ext_resource type="Script" uid="uid://dh0cisaqevjns" path="res://Components/Dungeon/DungeonGenerator.cs" id="1_s7lx6"]
 [ext_resource type="Script" uid="uid://canmv5ssx6gp5" path="res://Components/Dungeon/RoomGenerator.cs" id="2_xht7t"]
@@ -11,6 +11,7 @@
 [ext_resource type="Script" uid="uid://dxj0hxi2ervou" path="res://Components/Dungeon/TilePlacer.cs" id="9_t4n6m"]
 [ext_resource type="Texture2D" uid="uid://dkwpqn62bcr1y" path="res://Assets/Sprites/WorldTileSet.png" id="10_t4n6m"]
 [ext_resource type="Texture2D" uid="uid://bjs8qfmk30hk1" path="res://Assets/Sprites/DisplayTileSet.png" id="11_ed0ct"]
+[ext_resource type="Script" uid="uid://b85vmp2qkn3q1" path="res://Components/Dungeon/DungeonRenderer.cs" id="12_ed0ct"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_qeo6l"]
 texture = ExtResource("10_t4n6m")
@@ -68,6 +69,9 @@ script = ExtResource("7_xht7t")
 
 [node name="GeneratorVisualizer" type="Node2D" parent="."]
 script = ExtResource("7_frg7a")
+
+[node name="DungeonRenderer" type="Node2D" parent="."]
+script = ExtResource("12_ed0ct")
 
 [node name="TilePlacer" type="Node2D" parent="."]
 script = ExtResource("9_t4n6m")
