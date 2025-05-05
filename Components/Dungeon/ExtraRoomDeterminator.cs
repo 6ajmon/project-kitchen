@@ -5,9 +5,9 @@ using System.Linq;
 
 public partial class ExtraRoomDeterminator : Node2D
 {
-    [Export] public int TileSize = 16;
-    [Export] public float LargestExtraRoomsPercent = 1.0f;
-    [Export] public int NeighborDistance = 2; // Number of tiles to consider as "neighboring"
+    public int TileSize = 16;
+    public float LargestExtraRoomsPercent = 1.0f;
+    public int NeighborDistance = 2; // Number of tiles to consider as "neighboring"
 
     public (List<Rect2I>, List<Vector2I>) DetermineExtraRooms(List<Rect2I> allCells, List<Rect2I> dungeonRooms)
     {

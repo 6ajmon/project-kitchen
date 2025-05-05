@@ -11,8 +11,8 @@ public enum DungeonTileType
 
 public partial class TilePlacer : Node2D
 {
-    [Export] public Vector2I FloorAtlasCoord = new Vector2I(1, 0); // Default floor tile coord
-    [Export] public Vector2I WallAtlasCoord = new Vector2I(0, 0);  // Default wall tile coord
+    public Vector2I FloorAtlasCoord = new Vector2I(1, 0); // Default floor tile coord
+    public Vector2I WallAtlasCoord = new Vector2I(0, 0);  // Default wall tile coord
     
     // These are the relative positions of the 4 display tiles around a world tile
     private readonly Vector2I[] DISPLAY_NEIGHBORS = new Vector2I[] { new(0, 0), new(1, 0), new(0, 1), new(1, 1) };

@@ -4,11 +4,11 @@ using System.Collections.Generic;
 
 public partial class RoomGenerator : Node2D
 {
-    [Export] public int NumberOfCells = 150;
-    [Export] public float CellSpawnRadius = 20.0f;
-    [Export] public float CellSpawnRadiusX = 20.0f;
-    [Export] public float CellSpawnRadiusY = 20.0f;
-    [Export] public int TileSize = 16;
+    public int NumberOfCells = 150;
+    public float CellSpawnRadius = 20.0f;
+    public float CellSpawnRadiusX = 20.0f;
+    public float CellSpawnRadiusY = 20.0f;
+    public int TileSize = 16;
     
     private RandomNumberGenerator _rng = new RandomNumberGenerator();
     

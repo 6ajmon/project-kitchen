@@ -4,22 +4,65 @@ using System.Collections.Generic;
 
 public partial class DungeonGenerator : Node2D
 {
-    [Export] public int NumberOfCells = 150;
-    [Export] public float CellSpawnRadius = 20.0f;
-    [Export] public float CellSpawnRadiusX = 60.0f;
-    [Export] public float CellSpawnRadiusY = 10.0f;
-    [Export] public float LargestRoomsPercent = 0.3f;
-    [Export] public float LoopPercent = 0.1f;
-    [Export] public int TileSize = 16;
-    [Export] public float ExtraRoomsPercent = 1.0f;
-    [Export] public int Seed = 0; // Add seed parameter, 0 means generate random seed
+    [ExportGroup("Cell Generation")]
+    [Export(PropertyHint.None, "Random seed for dungeon generation (0 = random)")]
+    public int Seed = 0;
     
-    [Export] public TileMapLayer WorldTileMap;
-    [Export] public TileMapLayer DisplayTileMap;
+    [Export(PropertyHint.None, "Total number of cells to generate")]
+    public int NumberOfCells = 64;
     
-    [Export] public bool EnableVisualization = true;
-    [Export] public float VisualizationStepDelay = 0.5f;
-    [Export] public float PhysicsTimeScale = 0.1f; // Slower physics simulation for better visualization
+    [Export(PropertyHint.None, "Radius for cell generation when using circular distribution")]
+    public float CellSpawnRadius = 20.0f;
+    
+    [Export(PropertyHint.None, "X-axis radius for elliptical cell distribution")]
+    public float CellSpawnRadiusX = 60.0f;
+    
+    [Export(PropertyHint.None, "Y-axis radius for elliptical cell distribution")]
+    public float CellSpawnRadiusY = 10.0f;
+    
+    [ExportGroup("Room Determination")]
+    [Export(PropertyHint.Range, "0,1,0.01")]
+    public float LargestRoomsPercent = 0.25f; // What percentage of largest cells become rooms
+    
+    [ExportGroup("Corridors & Extra Rooms")]
+    [Export(PropertyHint.Range, "0,1,0.01")]
+    public float LoopPercent = 0.25f; // Percentage of non-MST edges to add as loops
+    
+    [Export(PropertyHint.Range, "0,1,0.01")]
+    public float ExtraRoomsPercent = 1.0f; // What percentage of neighboring cells become extra rooms
+    
+    [Export(PropertyHint.Range, "1,10,1")]
+    public int HallwayWidth = 2; // Width of hallways in tiles
+    
+    [Export(PropertyHint.Range, "1,10,1")]
+    public int NeighborDistance = 2; // Number of tiles to consider as "neighboring" for extra rooms
+    
+    [ExportGroup("Tile Settings")]
+    [Export(PropertyHint.None, "Size of each tile in pixels")]
+    public int TileSize = 16;
+    
+    [Export(PropertyHint.None, "Atlas coordinates for floor tiles")]
+    public Vector2I FloorAtlasCoord = new Vector2I(1, 0);
+    
+    [Export(PropertyHint.None, "Atlas coordinates for wall tiles")]
+    public Vector2I WallAtlasCoord = new Vector2I(0, 0);
+    
+    [ExportGroup("Tilemaps")]
+    [Export(PropertyHint.None, "The tilemap for collision/gameplay")]
+    public TileMapLayer WorldTileMap;
+    
+    [Export(PropertyHint.None, "The tilemap for visual display")]
+    public TileMapLayer DisplayTileMap;
+    
+    [ExportGroup("Visualization")]
+    [Export(PropertyHint.None, "Whether to visualize the generation process")]
+    public bool EnableVisualization = true;
+    
+    [Export(PropertyHint.Range, "0.1,2.0,0.1")]
+    public float VisualizationStepDelay = 0.5f; // Delay between visualization steps
+    
+    [Export(PropertyHint.Range, "0.001,0.5,0.001")]
+    public float PhysicsTimeScale = 0.02f; // Physics simulation speed (lower = slower)
     
     private RandomNumberGenerator _rng = new RandomNumberGenerator();
     private List<Rect2I> _cells = new List<Rect2I>();
@@ -120,18 +163,28 @@ public partial class DungeonGenerator : Node2D
         // Initialize hallway generator
         _hallwayGenerator = GetNode<HallwayGenerator>("HallwayGenerator"); 
         _hallwayGenerator.TileSize = TileSize;
+        _hallwayGenerator.HallwayWidth = HallwayWidth;
         _hallwayGenerator.SetSeed(Seed); // Pass the seed
         
         // Initialize extra room determinator
         _extraRoomDeterminator = GetNode<ExtraRoomDeterminator>("ExtraRoomDeterminator");
         _extraRoomDeterminator.TileSize = TileSize;
         _extraRoomDeterminator.LargestExtraRoomsPercent = ExtraRoomsPercent;
+        _extraRoomDeterminator.NeighborDistance = NeighborDistance;
     
         // Initialize visualizer if needed
         if (EnableVisualization)
         {
             _visualizer = GetNode<GeneratorVisualizer>("GeneratorVisualizer");
             _visualizer.TileSize = TileSize;
+        }
+        
+        // Initialize tile placer
+        TilePlacer tilePlacer = GetNode<TilePlacer>("TilePlacer");
+        if (tilePlacer != null)
+        {
+            tilePlacer.FloorAtlasCoord = FloorAtlasCoord;
+            tilePlacer.WallAtlasCoord = WallAtlasCoord;
         }
     }
     
@@ -414,22 +467,6 @@ public partial class DungeonGenerator : Node2D
         return closestIndex;
     }
     
-    // Returns the number of available extra rooms
-    public int GetExtraRoomCount()
-    {
-        return _extraRooms.Count;
-    }
-    
-    // Get extra room information for UI or gameplay logic
-    public List<(Rect2I room, Vector2I center)> GetExtraRooms()
-    {
-        List<(Rect2I, Vector2I)> result = new List<(Rect2I, Vector2I)>();
-        for (int i = 0; i < _extraRooms.Count; i++)
-        {
-            result.Add((_extraRooms[i], _extraRoomCenters[i]));
-        }
-        return result;
-    }
     
     private void RenderDungeon()
     {

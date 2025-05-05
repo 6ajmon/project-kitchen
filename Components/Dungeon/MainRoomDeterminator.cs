@@ -5,8 +5,8 @@ using System.Linq;
 
 public partial class MainRoomDeterminator : Node2D
 {
-    [Export] public int TileSize = 16;
-    [Export] public float LargestRoomsPercent = 0.3f;  // 30% największych pokoi
+    public int TileSize = 16;
+    public float LargestRoomsPercent = 0.3f;  // 30% największych pokoi
     
     public (List<Rect2I>, List<Vector2I>) DetermineRooms(List<Rect2I> cells)
     {

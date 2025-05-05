@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 public partial class GeneratorVisualizer : Node2D
 {
-    [Export] public int TileSize = 16;
+    public int TileSize = 16;
     
     // Visualization containers
     private Node2D _cellsVisContainer;

@@ -4,8 +4,8 @@ using System.Collections.Generic;
 
 public partial class HallwayGenerator : Node2D
 {
-    [Export] public int TileSize = 16;
-    [Export] public int HallwayWidth = 2; // Width of hallways in tiles
+    public int TileSize = 16;
+    public int HallwayWidth = 2; // Width of hallways in tiles
     private RandomNumberGenerator _rng = new RandomNumberGenerator();
     
     public override void _Ready()
