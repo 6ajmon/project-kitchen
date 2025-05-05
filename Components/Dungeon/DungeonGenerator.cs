@@ -6,6 +6,8 @@ public partial class DungeonGenerator : Node2D
 {
     [Export] public int NumberOfCells = 150;
     [Export] public float CellSpawnRadius = 20.0f;
+    [Export] public float CellSpawnRadiusX = 60.0f;
+    [Export] public float CellSpawnRadiusY = 10.0f;
     [Export] public float LargestRoomsPercent = 0.3f;
     [Export] public float LoopPercent = 0.1f;
     [Export] public int TileSize = 16;
@@ -95,6 +97,8 @@ public partial class DungeonGenerator : Node2D
         _roomGenerator.TileSize = TileSize;
         _roomGenerator.NumberOfCells = NumberOfCells;
         _roomGenerator.CellSpawnRadius = CellSpawnRadius;
+        _roomGenerator.CellSpawnRadiusX = CellSpawnRadiusX;
+        _roomGenerator.CellSpawnRadiusY = CellSpawnRadiusY;
         _roomGenerator.SetSeed(Seed); // Pass the seed
         
         // Initialize room separator
