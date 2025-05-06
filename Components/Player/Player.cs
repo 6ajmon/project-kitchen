@@ -1,15 +1,24 @@
 using Godot;
 using System;
 
-public partial class Player : Node2D
+public partial class Player : CharacterBody2D
 {
-	[Export] private float speed = 300;
-	private AStarGrid2D aStarGrid;
-	Godot.Collections.Array<Vector2I> currentPath;
-	public Vector2I playerPosition = new(5, 7);
-	public bool isSelected = false;
+	[Export] private float speed = 200;
+	
 	public override void _Ready()
 	{
 		
+	}
+	
+	public override void _PhysicsProcess(double delta)
+	{
+		// Get input direction (WASD or arrow keys)
+		Vector2 inputDirection = Input.GetVector("MoveLeft", "MoveRight", "MoveUp", "MoveDown");
+		
+		// Set the velocity based on input direction and speed
+		Velocity = inputDirection * speed;
+		
+		// Move the character and handle collisions
+		MoveAndSlide();
 	}
 }

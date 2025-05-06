@@ -21,11 +21,13 @@ public partial class DungeonRenderer : Node2D
         }
     }
     
+    // Updated method signature to include startingRoomIndex
     public void RenderDungeon(
         List<Rect2I> cells, 
         List<Rect2I> rooms, 
         List<Vector2I> roomCenters,
-        List<Vector2I> corridorPositions = null)
+        List<Vector2I> corridorPositions = null,
+        int startingRoomIndex = -1)
     {
         // Clear any existing tiles on the WorldTileMap
         WorldTileMap.Clear();
@@ -150,6 +152,15 @@ public partial class DungeonRenderer : Node2D
                     wallPositions.Add(neighborTilePos);
                 }
             }
+        }
+        
+        // Special handling for the starting room (e.g., place a player marker)
+        if (startingRoomIndex >= 0 && startingRoomIndex < roomCenters.Count)
+        {
+            Vector2I startRoomCenter = roomCenters[startingRoomIndex];
+            
+            // Here you could add special tiles or markers to the starting room
+            // For example, a special floor tile or a player spawn point
         }
         
         // Update display tiles using the TilePlacer
