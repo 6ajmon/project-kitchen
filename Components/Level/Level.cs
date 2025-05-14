@@ -6,6 +6,9 @@ public partial class Level : Node2D
     [Export]
     private PackedScene PlayerScene;
     
+    [Export]
+    private PackedScene PlayerCameraScene;
+    
     private DungeonGenerator _dungeonGenerator;
     private Player _player;
     
@@ -29,6 +32,12 @@ public partial class Level : Node2D
         if (PlayerScene == null)
         {
             GD.PrintErr("Player scene not assigned. Set it in the inspector.");
+        }
+        
+        // Ensure we have the PlayerCamera scene reference
+        if (PlayerCameraScene == null)
+        {
+            GD.PrintErr("PlayerCamera scene not assigned. Set it in the inspector.");
         }
     }
     
@@ -62,5 +71,30 @@ public partial class Level : Node2D
         // Add player to the scene
         AddChild(_player);
         GD.Print($"Player spawned at starting room position: {position}");
+        
+        // Attach camera to the player if the camera scene is available
+        if (PlayerCameraScene != null)
+        {
+            // Instance the camera scene
+            PlayerCamera camera = PlayerCameraScene.Instantiate<PlayerCamera>();
+            
+            if (camera == null)
+            {
+                GD.PrintErr("Failed to instantiate PlayerCamera scene");
+                return;
+            }
+            
+            // Add camera as a child of the player
+            _player.AddChild(camera);
+            
+            // Make this the current camera
+            camera.MakeCurrent();
+            
+            GD.Print("PlayerCamera attached to player");
+        }
+        else
+        {
+            GD.PrintErr("PlayerCamera scene not assigned, player will not have a camera");
+        }
     }
 }
