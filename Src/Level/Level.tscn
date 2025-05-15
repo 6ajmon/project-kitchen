@@ -1,0 +1,14 @@
+[gd_scene load_steps=5 format=3 uid="uid://dvwcfdaqiiftf"]
+
+[ext_resource type="Script" uid="uid://3rujw0i4xnlw" path="res://Src/Level/Level.cs" id="1_gm1c0"]
+[ext_resource type="PackedScene" uid="uid://btrd82av6j5pk" path="res://Src/Dungeon/DungeonGenerator.tscn" id="2_6b3dk"]
+[ext_resource type="PackedScene" uid="uid://d3v2h3qmi1hxb" path="res://Src/Player/Player.tscn" id="3_fvisq"]
+[ext_resource type="PackedScene" uid="uid://dw2tj2a3udqql" path="res://Src/UI/PlayerCamera.tscn" id="3_gm1c0"]
+
+[node name="Level" type="Node2D"]
+script = ExtResource("1_gm1c0")
+PlayerScene = ExtResource("3_fvisq")
+PlayerCameraScene = ExtResource("3_gm1c0")
+
+[node name="DungeonGenerator" parent="." instance=ExtResource("2_6b3dk")]
+Seed = 111111
