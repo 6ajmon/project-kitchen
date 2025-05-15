@@ -37,4 +37,35 @@ public partial class MainRoomDeterminator : Node2D
         
         return (rooms, roomCenters);
     }
+
+    public int DetermineStartingRoom(List<Vector2I> roomCenters)
+    {
+        if (roomCenters.Count == 0)
+            return -1;
+        
+        // Calculate the center point of all room centers
+        Vector2I centerOfAllRooms = new Vector2I(0, 0);
+        foreach (var center in roomCenters)
+        {
+            centerOfAllRooms += center;
+        }
+        centerOfAllRooms /= roomCenters.Count;
+        
+        // Find the room closest to the center
+        int closestRoomIndex = 0;
+        float closestDistance = float.MaxValue;
+        
+        for (int i = 0; i < roomCenters.Count; i++)
+        {
+            float distance = centerOfAllRooms.DistanceSquaredTo(roomCenters[i]);
+            if (distance < closestDistance)
+            {
+                closestDistance = distance;
+                closestRoomIndex = i;
+            }
+        }
+        
+        GD.Print($"Starting room determined: Room {closestRoomIndex} at {roomCenters[closestRoomIndex]}");
+        return closestRoomIndex;
+    }
 }

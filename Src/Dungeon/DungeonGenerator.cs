@@ -71,6 +71,7 @@ public partial class DungeonGenerator : Node2D
     private List<(int, int)> _corridorEdges = new List<(int, int)>();
     private List<Rect2I> _extraRooms = new List<Rect2I>();
     private List<Vector2I> _extraRoomCenters = new List<Vector2I>();
+    private int _startingRoomIndex = -1;
     
     // Child nodes
     private RoomGenerator _roomGenerator;
@@ -99,6 +100,10 @@ public partial class DungeonGenerator : Node2D
     private int _currentVisualizationStep = 0;
     private int _maxVisualizationSteps = 0;
     private float _visualizationTimer = 0;
+
+    // Add signal for dungeon generation completion
+    [Signal]
+    public delegate void DungeonGenerationCompletedEventHandler(Vector2I startRoomPosition);
     
     public override void _Ready()
     {
@@ -255,7 +260,11 @@ public partial class DungeonGenerator : Node2D
                 if (_currentVisualizationStep == 0)
                 {
                     (_rooms, _roomCenters) = _roomDeterminator.DetermineRooms(_cells);
-                    _visualizer.VisualizeRooms(_rooms, _roomCenters);
+                    
+                    // Determine starting room
+                    _startingRoomIndex = _roomDeterminator.DetermineStartingRoom(_roomCenters);
+                    
+                    _visualizer.VisualizeRooms(_rooms, _roomCenters, _startingRoomIndex);
                     _currentState = GenerationState.ConnectingRooms;
                     _currentVisualizationStep = 0;
                     GD.Print("Rooms determined. Starting Delaunay triangulation...");
@@ -383,6 +392,9 @@ public partial class DungeonGenerator : Node2D
         // Step 3: Determine which cells are rooms
         (_rooms, _roomCenters) = _roomDeterminator.DetermineRooms(_cells);
         
+        // Determine starting room
+        _startingRoomIndex = _roomDeterminator.DetermineStartingRoom(_roomCenters);
+        
         if (_roomCenters.Count < 2)
         {
             GD.PrintErr("Not enough rooms generated. Dungeon generation cannot continue.");
@@ -417,7 +429,18 @@ public partial class DungeonGenerator : Node2D
     
     private void RenderDungeon()
     {
-        // Use the DungeonRenderer to render the dungeon
-        _dungeonRenderer.RenderDungeon(_cells, _rooms, _roomCenters, new List<Vector2I>());
+        // Use the DungeonRenderer to render the dungeon with starting room information
+        _dungeonRenderer.RenderDungeon(_cells, _rooms, _roomCenters, new List<Vector2I>(), _startingRoomIndex);
+        
+        // Emit signal that dungeon generation is complete with starting room position
+        if (_startingRoomIndex >= 0 && _startingRoomIndex < _roomCenters.Count)
+        {
+            EmitSignal(SignalName.DungeonGenerationCompleted, _roomCenters[_startingRoomIndex]);
+            GD.Print($"Dungeon generation complete. Starting room position: {_roomCenters[_startingRoomIndex]}");
+        }
+        else
+        {
+            GD.PrintErr("Invalid starting room index. Cannot emit completion signal.");
+        }
     }
 }

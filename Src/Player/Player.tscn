@@ -1,0 +1,37 @@
+[gd_scene load_steps=7 format=3 uid="uid://d3v2h3qmi1hxb"]
+
+[ext_resource type="Script" uid="uid://w5gqxp2jv14f" path="res://Src/Player/Player.cs" id="1_8j6by"]
+[ext_resource type="Texture2D" uid="uid://blj7d4qig2v37" path="res://Assets/Sprites/pan.png" id="1_xereb"]
+[ext_resource type="PackedScene" uid="uid://b6801pbqnyvwk" path="res://Src/Components/HitboxComponent.tscn" id="3_kpvkq"]
+[ext_resource type="PackedScene" uid="uid://cl4ce8cai1tr7" path="res://Src/Components/HealthComponent.tscn" id="4_rtus5"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_8qe71"]
+radius = 5.0
+height = 14.0
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_kpvkq"]
+radius = 5.0
+height = 12.0
+
+[node name="Player" type="CharacterBody2D"]
+script = ExtResource("1_8j6by")
+speed = 600.0
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.125, 0.125)
+texture = ExtResource("1_xereb")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CapsuleShape2D_8qe71")
+
+[node name="HitboxComponent" parent="." node_paths=PackedStringArray("HealthComponent") instance=ExtResource("3_kpvkq")]
+HealthComponent = NodePath("../HealathComponent")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HitboxComponent"]
+shape = SubResource("CapsuleShape2D_kpvkq")
+
+[node name="HealathComponent" parent="." instance=ExtResource("4_rtus5")]
+
+[node name="ProgressBar" type="ProgressBar" parent="HealathComponent"]
+offset_right = 4.0
+offset_bottom = 27.0

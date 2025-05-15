@@ -116,7 +116,7 @@ public partial class GeneratorVisualizer : Node2D
         _previousCellPositions = new List<Rect2I>(cells);
     }
     
-    public void VisualizeRooms(List<Rect2I> rooms, List<Vector2I> roomCenters)
+    public void VisualizeRooms(List<Rect2I> rooms, List<Vector2I> roomCenters, int startingRoomIndex = -1)
     {
         // Clear previous room visualization
         foreach (Node child in _roomsVisContainer.GetChildren())
@@ -130,25 +130,55 @@ public partial class GeneratorVisualizer : Node2D
             Rect2I room = rooms[i];
             Vector2I center = roomCenters[i];
             
-            // Room rectangle
+            // Room rectangle - highlight starting room with different color
             ColorRect rect = new ColorRect();
             rect.Position = new Vector2(room.Position.X, room.Position.Y);
             rect.Size = new Vector2(room.Size.X, room.Size.Y);
-            rect.Color = new Color(0.8f, 0.4f, 0.4f, 0.5f);
+            
+            if (i == startingRoomIndex)
+            {
+                rect.Color = new Color(0.2f, 0.8f, 0.3f, 0.6f); // Green for starting room
+            }
+            else
+            {
+                rect.Color = new Color(0.8f, 0.4f, 0.4f, 0.5f); // Original color for other rooms
+            }
+            
             _roomsVisContainer.AddChild(rect);
             
-            // Room center marker
+            // Room center marker - make it more prominent for starting room
             ColorRect centerMarker = new ColorRect();
             centerMarker.Position = new Vector2(center.X - 5, center.Y - 5);
             centerMarker.Size = new Vector2(10, 10);
-            centerMarker.Color = new Color(1.0f, 0.2f, 0.2f, 0.8f);
+            
+            if (i == startingRoomIndex)
+            {
+                centerMarker.Color = new Color(0.2f, 1.0f, 0.2f, 0.8f); // Brighter green for starting room
+                centerMarker.Size = new Vector2(12, 12); // Slightly larger
+                centerMarker.Position = new Vector2(center.X - 6, center.Y - 6);
+            }
+            else
+            {
+                centerMarker.Color = new Color(1.0f, 0.2f, 0.2f, 0.8f);
+            }
+            
             _roomsVisContainer.AddChild(centerMarker);
             
             // Room number label
             Label label = new Label();
             label.Text = i.ToString();
             label.Position = new Vector2(center.X - 10, center.Y - 10);
-            label.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.8f);
+            
+            if (i == startingRoomIndex)
+            {
+                label.Text += " (Start)";
+                label.Modulate = new Color(0.2f, 1.0f, 0.2f, 0.9f);
+            }
+            else
+            {
+                label.Modulate = new Color(1.0f, 1.0f, 1.0f, 0.8f);
+            }
+            
             _roomsVisContainer.AddChild(label);
         }
     }

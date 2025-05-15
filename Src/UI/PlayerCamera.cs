@@ -1,7 +1,7 @@
 using Godot;
 using System;
 
-public partial class Camera : Camera2D
+public partial class PlayerCamera : Camera2D
 {
     [Export] public float speed = 1000f; // Camera movement speed
     [Export] public float zoomSpeed = 0.1f; // How much to zoom per scroll
