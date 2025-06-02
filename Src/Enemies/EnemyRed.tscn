@@ -1,0 +1,26 @@
+[gd_scene load_steps=6 format=3 uid="uid://nj3ds4muwm3l"]
+
+[ext_resource type="PackedScene" uid="uid://cyiycn0n6aqvc" path="res://Src/Enemies/Enemy.tscn" id="1_2ck8x"]
+[ext_resource type="Script" uid="uid://c435ehstnqq7x" path="res://Src/Enemies/EnemyRed.cs" id="2_060x3"]
+[ext_resource type="Texture2D" uid="uid://blj7d4qig2v37" path="res://Assets/Sprites/pan.png" id="2_gml4u"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_060x3"]
+radius = 47.0
+height = 114.0
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_gml4u"]
+radius = 38.0
+height = 94.0
+
+[node name="EnemyRed" instance=ExtResource("1_2ck8x")]
+script = ExtResource("2_060x3")
+
+[node name="Sprite2D" parent="." index="0"]
+modulate = Color(0.996945, 6.23293e-06, 1.54018e-06, 1)
+texture = ExtResource("2_gml4u")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HitboxComponent" index="0"]
+shape = SubResource("CapsuleShape2D_060x3")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." index="3"]
+shape = SubResource("CapsuleShape2D_gml4u")
