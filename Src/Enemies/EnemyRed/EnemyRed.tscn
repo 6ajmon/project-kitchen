@@ -17,6 +17,7 @@ script = ExtResource("2_j2b3e")
 Speed = 200.0
 damage = 10.0
 chaseRange = 200.0
+damageCooldown = 1.0
 
 [node name="Sprite2D" parent="." index="0"]
 modulate = Color(0.996945, 6.23293e-06, 1.54018e-06, 1)
