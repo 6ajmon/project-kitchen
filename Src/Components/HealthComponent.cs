@@ -13,9 +13,12 @@ public partial class HealthComponent : Node2D
 	public override void _Ready()
     {
         CurrentHealth = MaxHealth;
-        _healthBar = GetChild<ProgressBar>(0);
-        _healthBar.MaxValue = MaxHealth;
-        _healthBar.Value = CurrentHealth;
+        _healthBar = GetChild<ProgressBar>(0) ?? null;
+        if (_healthBar != null)
+        {
+            _healthBar.MaxValue = MaxHealth;
+            _healthBar.Value = CurrentHealth;
+        }
     }
 
 	public void TakeDamage(float damage)

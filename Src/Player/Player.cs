@@ -12,13 +12,10 @@ public partial class Player : CharacterBody2D
 	
 	public override void _PhysicsProcess(double delta)
 	{
-		// Get input direction (WASD or arrow keys)
 		Vector2 inputDirection = Input.GetVector("MoveLeft", "MoveRight", "MoveUp", "MoveDown");
 		
-		// Set the velocity based on input direction and speed
 		Velocity = inputDirection * speed;
 		
-		// Move the character and handle collisions
 		MoveAndSlide();
 	}
 }

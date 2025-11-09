@@ -1,0 +1,15 @@
+[gd_scene load_steps=4 format=3 uid="uid://cyiycn0n6aqvc"]
+
+[ext_resource type="Script" uid="uid://dngsyx5xm6gd6" path="res://Src/Enemies/Enemy.cs" id="1_qsiry"]
+[ext_resource type="PackedScene" uid="uid://cl4ce8cai1tr7" path="res://Src/Components/HealthComponent.tscn" id="2_ou5p2"]
+[ext_resource type="PackedScene" uid="uid://b6801pbqnyvwk" path="res://Src/Components/HitboxComponent.tscn" id="3_hvkww"]
+
+[node name="Enemy" type="CharacterBody2D"]
+script = ExtResource("1_qsiry")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+
+[node name="HealthComponent" parent="." instance=ExtResource("2_ou5p2")]
+
+[node name="HitboxComponent" parent="." node_paths=PackedStringArray("HealthComponent") instance=ExtResource("3_hvkww")]
+HealthComponent = NodePath("../HealthComponent")
