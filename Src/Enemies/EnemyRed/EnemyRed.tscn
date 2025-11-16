@@ -4,13 +4,13 @@
 [ext_resource type="Texture2D" uid="uid://blj7d4qig2v37" path="res://Assets/Sprites/pan.png" id="2_gml4u"]
 [ext_resource type="Script" uid="uid://c435ehstnqq7x" path="res://Src/Enemies/EnemyRed/EnemyRed.cs" id="2_j2b3e"]
 
-[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_060x3"]
-radius = 7.0
-height = 18.0
-
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_gml4u"]
 radius = 7.0
 height = 14.0
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_060x3"]
+radius = 7.0
+height = 18.0
 
 [node name="EnemyRed" instance=ExtResource("1_2ck8x")]
 script = ExtResource("2_j2b3e")
@@ -19,13 +19,18 @@ damage = 10.0
 chaseRange = 200.0
 damageCooldown = 1.0
 
-[node name="Sprite2D" parent="." index="0"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." index="0"]
+shape = SubResource("CapsuleShape2D_gml4u")
+
+[node name="Sprite2D" parent="." index="1"]
 modulate = Color(0.996945, 6.23293e-06, 1.54018e-06, 1)
 scale = Vector2(0.125, 0.125)
 texture = ExtResource("2_gml4u")
 
+[node name="ProgressBar" type="ProgressBar" parent="HealthComponent" index="0"]
+offset_right = 4.0
+offset_bottom = 27.0
+theme_override_font_sizes/font_size = 12
+
 [node name="CollisionShape2D" type="CollisionShape2D" parent="HitboxComponent" index="0"]
 shape = SubResource("CapsuleShape2D_060x3")
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="." index="3"]
-shape = SubResource("CapsuleShape2D_gml4u")

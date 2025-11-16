@@ -9,7 +9,6 @@ public partial class EnemyRed : Enemy
     [Export] public float damageCooldown = 1.0f;
 
     private Player player;
-    private HitboxComponent hitboxComponent;
     private double lastDamageTime = 0.0;
 
     public override void _Ready()
@@ -17,7 +16,6 @@ public partial class EnemyRed : Enemy
         base._Ready();
 
         player = GetNode<Player>("/root/Level/Player");
-        hitboxComponent = GetNode<HitboxComponent>("HitboxComponent");
     }
 
     public override void _PhysicsProcess(double delta)
@@ -33,7 +31,7 @@ public partial class EnemyRed : Enemy
         }
         MoveAndSlide();
 
-        if (player != null && hitboxComponent != null)
+        if (player != null && HitboxComponent != null)
         {
             var currentTime = Time.GetUnixTimeFromSystem();
             if (IsCollidingWithPlayer() && currentTime - lastDamageTime >= damageCooldown)

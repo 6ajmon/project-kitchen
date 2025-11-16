@@ -4,8 +4,10 @@
 [ext_resource type="PackedScene" uid="uid://cl4ce8cai1tr7" path="res://Src/Components/HealthComponent.tscn" id="2_ou5p2"]
 [ext_resource type="PackedScene" uid="uid://b6801pbqnyvwk" path="res://Src/Components/HitboxComponent.tscn" id="3_hvkww"]
 
-[node name="Enemy" type="CharacterBody2D"]
+[node name="Enemy" type="CharacterBody2D" node_paths=PackedStringArray("HitboxComponent", "HealthComponent")]
 script = ExtResource("1_qsiry")
+HitboxComponent = NodePath("HitboxComponent")
+HealthComponent = NodePath("HealthComponent")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 
@@ -13,3 +15,5 @@ script = ExtResource("1_qsiry")
 
 [node name="HitboxComponent" parent="." node_paths=PackedStringArray("HealthComponent") instance=ExtResource("3_hvkww")]
 HealthComponent = NodePath("../HealthComponent")
+
+[connection signal="area_entered" from="HitboxComponent" to="." method="HitboxAreaEntered"]
