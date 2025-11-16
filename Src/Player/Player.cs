@@ -27,7 +27,6 @@ public partial class Player : CharacterBody2D
 
 	private void Shoot()
 	{
-		//get mouse positon
 		Vector2 mousePosition = GetGlobalMousePosition();
 		if (playerBulletScene != null)
 		{

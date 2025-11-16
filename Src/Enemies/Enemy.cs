@@ -16,18 +16,19 @@ public partial class Enemy : CharacterBody2D
             HealthComponent.Died += OnDied;
         }
     }
-    void HitboxAreaEntered(Area2D area)
+    private void HitboxAreaEntered(Area2D area)
     {
         if (area.IsInGroup("PlayerBullet"))
         {
-            var playerBullet = (PlayerBullet)area;
-            if (HitboxComponent != null)
+            var playerBullet = area as PlayerBullet;  
+            if (playerBullet != null && HitboxComponent != null)  
             {
-                HitboxComponent.Damage(playerBullet.GetDamage());
+                HitboxComponent.Damage(playerBullet.GetDamage());  
+                playerBullet.HandleContact();
             }
         }
     }
-    void OnDied()
+    private void OnDied()
     {
         QueueFree();
     }
