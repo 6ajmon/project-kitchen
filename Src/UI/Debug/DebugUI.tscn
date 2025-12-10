@@ -1,0 +1,62 @@
+[gd_scene load_steps=2 format=3 uid="uid://btgiynbt7muy0"]
+
+[ext_resource type="Script" uid="uid://poudwtjvt137" path="res://Src/UI/Debug/DebugUi.cs" id="1_xh6b3"]
+
+[node name="CanvasLayer" type="CanvasLayer"]
+script = ExtResource("1_xh6b3")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 10
+size_flags_vertical = 3
+
+[node name="HSplitContainer" type="HSplitContainer" parent="MarginContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/HSplitContainer"]
+layout_mode = 2
+size_flags_horizontal = 10
+
+[node name="Panel" type="Panel" parent="MarginContainer/HSplitContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/HSplitContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/HSplitContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+text = "PEAK"
+
+[node name="GridContainer" type="GridContainer" parent="MarginContainer/HSplitContainer/VBoxContainer"]
+layout_mode = 2
+columns = 2
+
+[node name="Label" type="Label" parent="MarginContainer/HSplitContainer/VBoxContainer/GridContainer"]
+layout_mode = 2
+text = "stat  1"
+
+[node name="Label2" type="Label" parent="MarginContainer/HSplitContainer/VBoxContainer/GridContainer"]
+layout_mode = 2
+text = "value 1"
+
+[node name="PanelContainer" type="PanelContainer" parent="MarginContainer/HSplitContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/HSplitContainer/PanelContainer"]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/HSplitContainer/PanelContainer/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 10
+size_flags_vertical = 2
+
+[node name="Label" type="Label" parent="MarginContainer/HSplitContainer/PanelContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 6
+text = "ai director zrobil cos"
