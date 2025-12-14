@@ -10,6 +10,9 @@ public partial class HealthComponent : Node2D
     [Signal]
     public delegate void DiedEventHandler();
 
+    [Signal]
+    public delegate void HealthChangedEventHandler(float newHealth, float changeAmount);
+
 	public override void _Ready()
     {
         CurrentHealth = MaxHealth;
@@ -24,6 +27,8 @@ public partial class HealthComponent : Node2D
 	public void TakeDamage(float damage)
 	{
 		CurrentHealth -= damage;
+        EmitSignal(SignalName.HealthChanged, CurrentHealth, -damage);
+
 		if (_healthBar != null)
 		{
 			_healthBar.Value = CurrentHealth;
@@ -33,4 +38,15 @@ public partial class HealthComponent : Node2D
             EmitSignal(SignalName.Died);
 		}
 	}
+
+    public void Heal(float amount)
+    {
+        CurrentHealth = Mathf.Min(CurrentHealth + amount, MaxHealth);
+        EmitSignal(SignalName.HealthChanged, CurrentHealth, amount);
+        
+        if (_healthBar != null)
+        {
+            _healthBar.Value = CurrentHealth;
+        }
+    }
 }

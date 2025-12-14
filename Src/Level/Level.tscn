@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://dvwcfdaqiiftf"]
+[gd_scene load_steps=8 format=3 uid="uid://dvwcfdaqiiftf"]
 
 [ext_resource type="Script" uid="uid://3rujw0i4xnlw" path="res://Src/Level/Level.cs" id="1_gm1c0"]
 [ext_resource type="PackedScene" uid="uid://btrd82av6j5pk" path="res://Src/Dungeon/DungeonGenerator.tscn" id="2_6b3dk"]
@@ -7,11 +7,6 @@
 [ext_resource type="PackedScene" uid="uid://nj3ds4muwm3l" path="res://Src/Enemies/EnemyRed/EnemyRed.tscn" id="5_yajcb"]
 [ext_resource type="PackedScene" uid="uid://dqu10aaib1wpa" path="res://Src/AI Director/Director.tscn" id="6_sg0e7"]
 [ext_resource type="PackedScene" uid="uid://btgiynbt7muy0" path="res://Src/UI/Debug/DebugUI.tscn" id="7_yakj5"]
-
-[sub_resource type="Curve" id="Curve_sg0e7"]
-_data = [Vector2(0, 0), 0.0, 1.0, 0, 1, Vector2(1, 1), 1.0, 0.0, 1, 0]
-point_count = 2
-metadata/_snap_enabled = true
 
 [node name="Level" type="Node"]
 script = ExtResource("1_gm1c0")
@@ -24,7 +19,6 @@ Seed = 111111
 EnableVisualization = false
 
 [node name="Director" parent="." instance=ExtResource("6_sg0e7")]
-ExpectedPerformanceCurve = SubResource("Curve_sg0e7")
 
 [node name="UI" type="Control" parent="."]
 layout_mode = 3

@@ -2,8 +2,11 @@
 
 [ext_resource type="Script" uid="uid://poudwtjvt137" path="res://Src/UI/Debug/DebugUi.cs" id="1_xh6b3"]
 
-[node name="CanvasLayer" type="CanvasLayer"]
+[node name="DebugUI" type="CanvasLayer" node_paths=PackedStringArray("_stateNameLabel", "_statTable", "_logContainer")]
 script = ExtResource("1_xh6b3")
+_stateNameLabel = NodePath("MarginContainer/HSplitContainer/VBoxContainer/HBoxContainer/StateNameLabel")
+_statTable = NodePath("MarginContainer/HSplitContainer/VBoxContainer/StatTable")
+_logContainer = NodePath("MarginContainer/HSplitContainer/PanelContainer/ScrollContainer/VBoxContainer")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
 anchors_preset = 15
@@ -28,19 +31,19 @@ layout_mode = 2
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/HSplitContainer/VBoxContainer"]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="MarginContainer/HSplitContainer/VBoxContainer/HBoxContainer"]
+[node name="StateNameLabel" type="Label" parent="MarginContainer/HSplitContainer/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 text = "PEAK"
 
-[node name="GridContainer" type="GridContainer" parent="MarginContainer/HSplitContainer/VBoxContainer"]
+[node name="StatTable" type="GridContainer" parent="MarginContainer/HSplitContainer/VBoxContainer"]
 layout_mode = 2
 columns = 2
 
-[node name="Label" type="Label" parent="MarginContainer/HSplitContainer/VBoxContainer/GridContainer"]
+[node name="Label" type="Label" parent="MarginContainer/HSplitContainer/VBoxContainer/StatTable"]
 layout_mode = 2
 text = "stat  1"
 
-[node name="Label2" type="Label" parent="MarginContainer/HSplitContainer/VBoxContainer/GridContainer"]
+[node name="Label2" type="Label" parent="MarginContainer/HSplitContainer/VBoxContainer/StatTable"]
 layout_mode = 2
 text = "value 1"
 
