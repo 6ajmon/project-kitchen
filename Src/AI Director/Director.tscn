@@ -43,15 +43,19 @@ script = ExtResource("3_n8aoe")
 
 [node name="BuffEnemies" type="Node" parent="Actions"]
 script = ExtResource("4_kw4te")
+Type = null
 
 [node name="DebuffEnemies" type="Node" parent="Actions"]
 script = ExtResource("5_ycqpt")
+Type = null
 
 [node name="ReduceSpawnRate" type="Node" parent="Actions"]
 script = ExtResource("6_icfmi")
+Type = null
 
 [node name="IncreaseSpawnRate" type="Node" parent="Actions"]
 script = ExtResource("7_ybp53")
+Type = null
 
 [node name="DifficultyStateMachine" type="Node" parent="." node_paths=PackedStringArray("_stateNodes")]
 script = ExtResource("3_8u4u6")

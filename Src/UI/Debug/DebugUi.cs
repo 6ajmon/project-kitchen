@@ -36,7 +36,7 @@ public partial class DebugUi : CanvasLayer
         }
     }
 
-    private void OnPerformanceMetricsUpdated(float expected, float current)
+    private void OnPerformanceMetricsUpdated(float expected, float current, float flowRatio, float benefitPoints, float negativePoints)
     {
         // Clear existing stats
         foreach (Node child in _statTable.GetChildren())
@@ -46,6 +46,9 @@ public partial class DebugUi : CanvasLayer
 
         AddStatRow("Expected Perf", expected.ToString("F2"));
         AddStatRow("Current Perf", current.ToString("F2"));
+        AddStatRow("Flow Ratio", flowRatio.ToString("F2"));
+        AddStatRow("Benefit Pts", benefitPoints.ToString("F0"));
+        AddStatRow("Negative Pts", negativePoints.ToString("F0"));
     }
 
     private void AddStatRow(string name, string value)

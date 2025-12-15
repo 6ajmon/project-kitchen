@@ -41,8 +41,13 @@ public partial class DifficultyStateMachine : Node
         SignalManager.Instance.EmitSignal(nameof(SignalManager.DifficultyStateChanged), newState.ToString());
     }
 
-    public override void _Process(double delta)
+    public void UpdateState(double delta)
     {
         _currentStateNode?.UpdateState(delta);
+    }
+
+    public override void _Process(double delta)
+    {
+        // Logic is driven by Director calling UpdateState
     }
 }

@@ -96,13 +96,47 @@ public partial class Director : Node
 
     public override void _Process(double delta)
     {
-        float dt = (float)delta;
-        
-        float benefitMultiplier = Mathf.Max(0, 2.0f - _currentPerformance);
-        float negativeMultiplier = Mathf.Max(0, _currentPerformance);
+        // Delegate behavior to current state
+        StateMachine?.UpdateState(delta);
+    }
 
-        AddBenefitPoints(PointsPerSecond * benefitMultiplier * dt);
-        AddNegativePoints(PointsPerSecond * negativeMultiplier * dt);
+    public void TrySpendBenefitPoints()
+    {
+        if (Data?.Performance == null) return;
+        TryExecuteWeightedAction(ActionType.Benefit, BenefitActionPoints, Data.Performance.TotalSessionTime, (cost) => SpendBenefitPoints(cost));
+    }
+
+    public void TrySpendNegativePoints()
+    {
+        if (Data?.Performance == null) return;
+        TryExecuteWeightedAction(ActionType.Negative, NegativeActionPoints, Data.Performance.TotalSessionTime, (cost) => SpendNegativePoints(cost));
+    }
+
+    private void TryExecuteWeightedAction(ActionType type, float availablePoints, double currentTime, Action<float> spendCallback)
+    {
+        // Filter candidates
+        var candidates = _actions.Where(a => a.ActionType == type && a.CanExecute(availablePoints, currentTime)).ToList();
+
+        if (candidates.Count == 0) return;
+
+        // Calculate Total Weight
+        float totalWeight = candidates.Sum(a => a.Weight);
+
+        // Weighted Random Selection
+        float randomValue = GD.Randf() * totalWeight;
+        float currentSum = 0;
+
+        foreach (var action in candidates)
+        {
+            currentSum += action.Weight;
+            if (randomValue <= currentSum)
+            {
+                // Execute this action
+                action.Execute(currentTime);
+                spendCallback(action.Cost);
+                break;
+            }
+        }
     }
 
     public void AddBenefitPoints(float amount)
@@ -138,7 +172,7 @@ public partial class Director : Node
         float expectedPerformance = CalculateExpectedPerformance(time);
         _currentPerformance = CalculateCurrentPerformance();
 
-        SignalManager.Instance.EmitSignal(nameof(SignalManager.PerformanceMetricsUpdated), expectedPerformance, _currentPerformance);
+        SignalManager.Instance.EmitSignal(nameof(SignalManager.PerformanceMetricsUpdated), expectedPerformance, _currentPerformance, _currentPerformance, BenefitActionPoints, NegativeActionPoints);
 
         UpdateGameState(_currentPerformance);
     }
@@ -181,13 +215,12 @@ public partial class Director : Node
 
         float totalPressure = (netEnemyPressure * enemySensitivity) + (recentDamage * damageSensitivity);
 
-        // Flow = 1.0 - TotalPressure
         // If Pressure = 0 -> Flow = 1.0 (Boredom)
         // If Pressure = 2.0 -> Flow = -1.0 (Anxiety)
         
-        float flow = 1.0f - totalPressure;
+        float currentPerformance = 1.0f - totalPressure;
         
-        return flow;
+        return currentPerformance;
     }
 
     private void UpdateGameState(float ratio)
