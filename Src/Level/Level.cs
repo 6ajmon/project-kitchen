@@ -54,6 +54,17 @@ public partial class Level : Node
     private void OnDungeonGenerationCompleted(Vector2I startRoomPosition)
     {
         GD.Print($"Dungeon generation completed. Spawning player at {startRoomPosition}");
+        
+        // Pass TileMap to EnemyManager
+        if (_dungeonGenerator != null && _dungeonGenerator.WorldTileMap != null)
+        {
+            EnemyManager.Instance.SetWorldTileMap(
+                _dungeonGenerator.WorldTileMap, 
+                _dungeonGenerator.FloorAtlasCoord, 
+                _dungeonGenerator.WallAtlasCoord
+            );
+        }
+
         SpawnPlayerAtPosition(startRoomPosition);
         SpawnEnemyAtPosition(startRoomPosition + new Vector2I(60, 0));
     }

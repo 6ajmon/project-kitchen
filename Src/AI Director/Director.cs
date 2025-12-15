@@ -172,7 +172,15 @@ public partial class Director : Node
         float expectedPerformance = CalculateExpectedPerformance(time);
         _currentPerformance = CalculateCurrentPerformance();
 
-        SignalManager.Instance.EmitSignal(nameof(SignalManager.PerformanceMetricsUpdated), expectedPerformance, _currentPerformance, _currentPerformance, BenefitActionPoints, NegativeActionPoints);
+        SignalManager.Instance.EmitSignal(nameof(SignalManager.PerformanceMetricsUpdated), 
+            expectedPerformance, 
+            _currentPerformance, 
+            _currentPerformance, 
+            BenefitActionPoints, 
+            NegativeActionPoints,
+            Data.Performance.RecentSpawnedValue,
+            DataManager.Instance.CurrentLivingValue
+        );
 
         UpdateGameState(_currentPerformance);
     }

@@ -9,6 +9,8 @@ public partial class Player : CharacterBody2D
 	
 	public override void _Ready()
 	{
+        GameManager.Instance.RegisterPlayer(this);
+
 		playerBulletScene = GD.Load<PackedScene>("res://Src/Projectiles/PlayerBullet/PlayerBullet.tscn");
         _healthComponent = GetNodeOrNull<HealthComponent>("HealthComponent");
         

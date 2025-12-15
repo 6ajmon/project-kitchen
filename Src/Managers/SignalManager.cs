@@ -9,7 +9,7 @@ public partial class SignalManager : Node
     [Signal] public delegate void DifficultyStateChangedEventHandler(string newStateName);
     [Signal] public delegate void PerformanceDataUpdatedEventHandler(float averageAccuracy, float totalDamageTaken, double totalSessionTime, double timeSinceLastHit, int totalKills);
     [Signal] public delegate void DirectorActionExecutedEventHandler(string actionName, float cost);
-    [Signal] public delegate void PerformanceMetricsUpdatedEventHandler(float expected, float current, float flowRatio, float benefitPoints, float negativePoints);
+    [Signal] public delegate void PerformanceMetricsUpdatedEventHandler(float expected, float current, float flowRatio, float benefitPoints, float negativePoints, float recentSpawned, float livingEnemies);
 
     // GAMEPLAY SIGNALS
     [Signal] public delegate void EnemyKilledEventHandler();

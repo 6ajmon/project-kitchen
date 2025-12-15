@@ -93,7 +93,7 @@ public partial class TilePlacer : Node2D
         return new Vector2I(2, 1); // Default to all-floor tile
     }
     
-    private DungeonTileType GetWorldTileType(Vector2I worldPos, TileMapLayer worldTileMap)
+    public DungeonTileType GetWorldTileType(Vector2I worldPos, TileMapLayer worldTileMap)
     {
         // Check if a cell exists at these coordinates
         if (worldTileMap.GetCellSourceId(worldPos) == -1)

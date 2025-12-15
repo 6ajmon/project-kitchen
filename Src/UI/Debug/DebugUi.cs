@@ -36,7 +36,7 @@ public partial class DebugUi : CanvasLayer
         }
     }
 
-    private void OnPerformanceMetricsUpdated(float expected, float current, float flowRatio, float benefitPoints, float negativePoints)
+    private void OnPerformanceMetricsUpdated(float expected, float current, float flowRatio, float benefitPoints, float negativePoints, float recentSpawned, float livingEnemies)
     {
         // Clear existing stats
         foreach (Node child in _statTable.GetChildren())
@@ -49,6 +49,8 @@ public partial class DebugUi : CanvasLayer
         AddStatRow("Flow Ratio", flowRatio.ToString("F2"));
         AddStatRow("Benefit Pts", benefitPoints.ToString("F0"));
         AddStatRow("Negative Pts", negativePoints.ToString("F0"));
+        AddStatRow("Recent Spawned", recentSpawned.ToString("F1"));
+        AddStatRow("Living Enemies", livingEnemies.ToString("F1"));
     }
 
     private void AddStatRow(string name, string value)
