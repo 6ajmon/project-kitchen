@@ -4,7 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://cl4ce8cai1tr7" path="res://Src/Components/HealthComponent.tscn" id="2_ou5p2"]
 [ext_resource type="PackedScene" uid="uid://b6801pbqnyvwk" path="res://Src/Components/HitboxComponent.tscn" id="3_hvkww"]
 
-[node name="Enemy" type="CharacterBody2D" node_paths=PackedStringArray("HitboxComponent", "HealthComponent") groups=["Enemies"]]
+[node name="Enemy" type="Area2D" node_paths=PackedStringArray("HitboxComponent", "HealthComponent") groups=["Enemies"]]
 script = ExtResource("1_qsiry")
 HitboxComponent = NodePath("HitboxComponent")
 HealthComponent = NodePath("HealthComponent")

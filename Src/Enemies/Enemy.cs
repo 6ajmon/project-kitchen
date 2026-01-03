@@ -1,7 +1,7 @@
 using Godot;
 using System;
 
-public partial class Enemy : CharacterBody2D
+public partial class Enemy : Area2D
 {
     [Export] public HitboxComponent HitboxComponent;
     [Export] public HealthComponent HealthComponent;

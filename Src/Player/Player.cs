@@ -16,6 +16,7 @@ public partial class Player : CharacterBody2D
         
         if (_healthComponent != null)
         {
+            _healthComponent.HasInvincibilityFrames = true;
             _healthComponent.HealthChanged += OnHealthChanged;
         }
 	}

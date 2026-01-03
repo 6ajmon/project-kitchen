@@ -4,10 +4,8 @@ using System;
 public partial class EnemyRed : Enemy
 {
     [Export] public float ChaseRange = 200f;
-    [Export] public float DamageCooldown = 1.0f;
 
     private Player player;
-    private double lastDamageTime = 0.0;
 
     public override void _Ready()
     {
@@ -23,48 +21,28 @@ public partial class EnemyRed : Enemy
         base._PhysicsProcess(delta);
         if (player != null && GlobalPosition.DistanceTo(player.GlobalPosition) <= ChaseRange)
         {
-            ChasePlayer();
+            ChasePlayer(delta);
         }
-        else
-        {
-            Velocity = Vector2.Zero;
-        }
-        MoveAndSlide();
 
         if (player != null && HitboxComponent != null)
         {
-            var currentTime = Time.GetUnixTimeFromSystem();
-            if (IsCollidingWithPlayer() && currentTime - lastDamageTime >= DamageCooldown)
+            if (OverlapsBody(player))
             {
                 var playerHitbox = player.GetNodeOrNull<HitboxComponent>("HitboxComponent");
                 if (playerHitbox != null)
                 {
                     playerHitbox.Damage(Damage);
-                    lastDamageTime = currentTime;
                 }
             }
         }
     }
 
-    private void ChasePlayer()
+    private void ChasePlayer(double delta)
     {
         if (player != null)
         {
             Vector2 direction = (player.GlobalPosition - GlobalPosition).Normalized();
-            Velocity = direction * Speed;
+            Position += direction * Speed * (float)delta;
         }
-    }
-
-    private bool IsCollidingWithPlayer()
-    {
-        for (int i = 0; i < GetSlideCollisionCount(); i++)
-        {
-            var collision = GetSlideCollision(i);
-            if (collision.GetCollider() == player)
-            {
-                return true;
-            }
-        }
-        return false;
     }
 }
