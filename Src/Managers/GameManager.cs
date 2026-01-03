@@ -21,6 +21,8 @@ public partial class GameManager : Node
             }
         }
     }
+
+    [Export] public bool ShowEnemyDebug = false;
     
     [ExportGroup("Difficulty Curve")]
     [Export] public Curve DifficultyCurve;           // Shared curve: X = time progress (0-1), Y = difficulty (0-1)

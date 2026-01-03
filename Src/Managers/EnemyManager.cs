@@ -28,6 +28,7 @@ public partial class EnemyManager : Node
     private TileMapLayer _worldTileMap;
     private Vector2I _floorAtlasCoord;
     private Vector2I _wallAtlasCoord;
+    private AStarGrid2D _astar;
     private Timer _spawnTimer;
     private RandomNumberGenerator _rng = new RandomNumberGenerator();
     
@@ -99,7 +100,46 @@ public partial class EnemyManager : Node
         _worldTileMap = tileMap;
         _floorAtlasCoord = floorCoord;
         _wallAtlasCoord = wallCoord;
+        InitializeAStar();
         GD.Print("[EnemyManager] WorldTileMap and coords set.");
+    }
+
+    private void InitializeAStar()
+    {
+        if (_worldTileMap == null || _worldTileMap.TileSet == null) return;
+
+        _astar = new AStarGrid2D();
+        _astar.Region = _worldTileMap.GetUsedRect();
+        _astar.CellSize = _worldTileMap.TileSet.TileSize;
+        _astar.DiagonalMode = AStarGrid2D.DiagonalModeEnum.OnlyIfNoObstacles;
+        _astar.Update();
+
+        foreach (Vector2I cellPos in _worldTileMap.GetUsedCells())
+        {
+            Vector2I atlasCoord = _worldTileMap.GetCellAtlasCoords(cellPos);
+            if (atlasCoord != _floorAtlasCoord)
+            {
+                _astar.SetPointSolid(cellPos, true);
+            }
+        }
+    }
+
+    public Vector2[] GetPath(Vector2 start, Vector2 end)
+    {
+        if (_astar == null || _worldTileMap == null) return Array.Empty<Vector2>();
+
+        Vector2I startCell = _worldTileMap.LocalToMap(_worldTileMap.ToLocal(start));
+        Vector2I endCell = _worldTileMap.LocalToMap(_worldTileMap.ToLocal(end));
+        
+        var idPath = _astar.GetIdPath(startCell, endCell);
+        
+        List<Vector2> path = new List<Vector2>();
+        foreach (Vector2I cell in idPath)
+        {
+            path.Add(_worldTileMap.ToGlobal(_worldTileMap.MapToLocal(cell)));
+        }
+        
+        return path.ToArray();
     }
 
     private void OnSpawnTimerTimeout()

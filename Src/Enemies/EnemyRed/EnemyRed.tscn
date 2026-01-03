@@ -14,7 +14,8 @@ height = 18.0
 
 [node name="EnemyRed" instance=ExtResource("1_2ck8x")]
 script = ExtResource("2_j2b3e")
-ChaseRange = 200.0
+AggroRange = 200.0
+DeaggroRange = 800.0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." index="0"]
 shape = SubResource("CapsuleShape2D_gml4u")
