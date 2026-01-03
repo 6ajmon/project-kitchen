@@ -1,0 +1,8 @@
+[gd_scene load_steps=3 format=3 uid="uid://b1apdrlpq8fx1"]
+
+[ext_resource type="Script" uid="uid://canlijl822egy" path="res://Src/Managers/EnemyManager.cs" id="1_45lpb"]
+[ext_resource type="PackedScene" uid="uid://nj3ds4muwm3l" path="res://Src/Enemies/EnemyRed/EnemyRed.tscn" id="2_ccden"]
+
+[node name="EnemyManager" type="Node"]
+script = ExtResource("1_45lpb")
+EnemyScenes = Array[PackedScene]([ExtResource("2_ccden")])

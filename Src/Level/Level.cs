@@ -1,7 +1,7 @@
 using Godot;
 using System;
 
-public partial class Level : Node2D
+public partial class Level : Node
 {
     [Export]
     private PackedScene PlayerScene;
@@ -54,8 +54,19 @@ public partial class Level : Node2D
     private void OnDungeonGenerationCompleted(Vector2I startRoomPosition)
     {
         GD.Print($"Dungeon generation completed. Spawning player at {startRoomPosition}");
+        
+        // Pass TileMap to EnemyManager
+        if (_dungeonGenerator != null && _dungeonGenerator.WorldTileMap != null)
+        {
+            EnemyManager.Instance.SetWorldTileMap(
+                _dungeonGenerator.WorldTileMap, 
+                _dungeonGenerator.FloorAtlasCoord, 
+                _dungeonGenerator.WallAtlasCoord
+            );
+        }
+
         SpawnPlayerAtPosition(startRoomPosition);
-        SpawnEnemyAtPosition(startRoomPosition + new Vector2I(60, 0));
+        //SpawnEnemyAtPosition(startRoomPosition + new Vector2I(60, 0));
     }
 
     private void SpawnPlayerAtPosition(Vector2I position)

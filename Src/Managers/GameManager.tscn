@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3 uid="uid://dxdpg5u4a7eig"]
+
+[ext_resource type="Script" uid="uid://d256olvlxeeud" path="res://Src/Managers/GameManager.cs" id="1_o3jt0"]
+
+[sub_resource type="Curve" id="Curve_o3jt0"]
+_data = [Vector2(0, 0.397709), 0.0, 0.0, 0, 0, Vector2(0.847162, 1), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[node name="GameManager" type="Node"]
+script = ExtResource("1_o3jt0")
+DifficultyCurve = SubResource("Curve_o3jt0")

@@ -3,10 +3,8 @@ using System;
 
 public partial class EnemyRed : Enemy
 {
-    [Export] public float Speed = 200f;
-    [Export] public float damage = 10f;
-    [Export] public float chaseRange = 200f;
-    [Export] public float damageCooldown = 1.0f;
+    [Export] public float ChaseRange = 200f;
+    [Export] public float DamageCooldown = 1.0f;
 
     private Player player;
     private double lastDamageTime = 0.0;
@@ -14,14 +12,16 @@ public partial class EnemyRed : Enemy
     public override void _Ready()
     {
         base._Ready();
-
-        player = GetNode<Player>("/root/Level/Player");
+        // Set default values if needed, or rely on Inspector
+        // Speed and Damage are now in base Enemy
+        
+        player = GetNodeOrNull<Player>("/root/Level/Player");
     }
 
     public override void _PhysicsProcess(double delta)
     {
         base._PhysicsProcess(delta);
-        if (player != null && GlobalPosition.DistanceTo(player.GlobalPosition) <= chaseRange)
+        if (player != null && GlobalPosition.DistanceTo(player.GlobalPosition) <= ChaseRange)
         {
             ChasePlayer();
         }
@@ -34,12 +34,12 @@ public partial class EnemyRed : Enemy
         if (player != null && HitboxComponent != null)
         {
             var currentTime = Time.GetUnixTimeFromSystem();
-            if (IsCollidingWithPlayer() && currentTime - lastDamageTime >= damageCooldown)
+            if (IsCollidingWithPlayer() && currentTime - lastDamageTime >= DamageCooldown)
             {
-                var playerHitbox = player.GetNode<HitboxComponent>("HitboxComponent");
+                var playerHitbox = player.GetNodeOrNull<HitboxComponent>("HitboxComponent");
                 if (playerHitbox != null)
                 {
-                    playerHitbox.Damage((int)damage);
+                    playerHitbox.Damage(Damage);
                     lastDamageTime = currentTime;
                 }
             }
