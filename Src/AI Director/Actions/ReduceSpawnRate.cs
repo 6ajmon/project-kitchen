@@ -3,7 +3,7 @@ using System;
 
 public partial class ReduceSpawnRate : DirectorAction
 {
-    [Export] public float RateMultiplier = 1.25f; // Increase interval by 25%
+    [Export] public float RateMultiplier = 1.5f; // Slow down spawns by 50%
 
     public ReduceSpawnRate()
     {
@@ -12,9 +12,7 @@ public partial class ReduceSpawnRate : DirectorAction
 
     protected override void OnExecute()
     {
-        GD.Print($"[Director] Reducing Spawn Rate! (Cost: {Cost})");
-        EnemyManager.Instance.SpawnInterval *= RateMultiplier;
-        // Clamp to some maximum
-        EnemyManager.Instance.SpawnInterval = Mathf.Min(10.0f, EnemyManager.Instance.SpawnInterval);
+        GD.Print($"[Director] Reducing Spawn Rate! (Multiplier: {RateMultiplier}x, Cost: {Cost})");
+        EnemyManager.Instance.ModifySpawnRate(RateMultiplier);
     }
 }

@@ -36,7 +36,7 @@ public partial class DebugUi : CanvasLayer
         }
     }
 
-    private void OnPerformanceMetricsUpdated(float expected, float current, float flowRatio, float benefitPoints, float negativePoints, float recentSpawned, float livingEnemies)
+    private void OnPerformanceMetricsUpdated(float expectedPerformance, float currentPlayerPower, float ratio, float benefitPoints, float negativePoints, float killRate, float damageRate, float isFlailing)
     {
         // Clear existing stats
         foreach (Node child in _statTable.GetChildren())
@@ -44,13 +44,40 @@ public partial class DebugUi : CanvasLayer
             child.QueueFree();
         }
 
-        AddStatRow("Expected Perf", expected.ToString("F2"));
-        AddStatRow("Current Perf", current.ToString("F2"));
-        AddStatRow("Flow Ratio", flowRatio.ToString("F2"));
+        // Core Cp/Ep/Ratio metrics
+        AddStatRow("Ep (Expected)", expectedPerformance.ToString("F3"));
+        AddStatRow("Cp (Player Power)", currentPlayerPower.ToString("F3"));
+        
+        // Ratio with state indicator
+        string ratioState = ratio < 0.8f ? "[REDUCE]" : (ratio > 1.2f ? "[INTENSIFY]" : "[FLOW]");
+        AddStatRow("Ratio (Cp/Ep)", $"{ratio:F2} {ratioState}");
+        
+        // Flailing detection
+        AddStatRow("Flailing", isFlailing > 0.5f ? "⚠ YES" : "No");
+        
+        // Director economy
+        AddStatRow("───────────", "───────────");
         AddStatRow("Benefit Pts", benefitPoints.ToString("F0"));
         AddStatRow("Negative Pts", negativePoints.ToString("F0"));
-        AddStatRow("Recent Spawned", recentSpawned.ToString("F1"));
-        AddStatRow("Living Enemies", livingEnemies.ToString("F1"));
+        
+        // Performance metrics
+        AddStatRow("───────────", "───────────");
+        AddStatRow("Kills/15s", killRate.ToString("F1"));
+        AddStatRow("Damage/15s", damageRate.ToString("F1"));
+        
+        // Session & Difficulty info
+        AddStatRow("───────────", "───────────");
+        if (GameManager.Instance != null)
+        {
+            float sessionTime = GameManager.Instance.SessionTime;
+            float sessionDuration = GameManager.Instance.SessionDuration;
+            AddStatRow("Session", $"{sessionTime:F0}s / {sessionDuration:F0}s");
+            AddStatRow("Difficulty", $"{GameManager.Instance.CurrentDifficulty:P0}");
+        }
+        if (EnemyManager.Instance != null)
+        {
+            AddStatRow("Spawn Rate", $"{EnemyManager.Instance.GetCurrentSpawnInterval():F1}s");
+        }
     }
 
     private void AddStatRow(string name, string value)

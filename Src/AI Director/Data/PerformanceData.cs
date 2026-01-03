@@ -17,15 +17,66 @@ public partial class PerformanceData : Node
     private TimeBuffer _recentDamageBuffer = new TimeBuffer(6.0f);
     private TimeBuffer _recentSpawnBuffer = new TimeBuffer(6.0f);
     private TimeBuffer _recentKillBuffer = new TimeBuffer(6.0f);
+    private TimeBuffer _recentDirectorSpawnBuffer = new TimeBuffer(6.0f);
+    
+    // Long Term Buffers (30 seconds window) for Flailing detection
+    private TimeBuffer _longTermDamageBuffer = new TimeBuffer(30.0f);
+
+    // Kill rate tracking (15 second window for responsive feedback)
+    private TimeBuffer _killRateBuffer = new TimeBuffer(15.0f);
+    
+    // Damage rate tracking (15 second window for responsive feedback)
+    private TimeBuffer _damageRateBuffer = new TimeBuffer(15.0f);
+    
+    // HP tracking for flailing detection (rapid HP drop)
+    private float _previousHealth = -1f;
+    private TimeBuffer _hpDropBuffer = new TimeBuffer(5.0f); // 5-second window for rapid HP drops
 
     public float RecentDamageTaken => _recentDamageBuffer.GetSum(TotalSessionTime);
+    public float LongTermDamageTaken => _longTermDamageBuffer.GetSum(TotalSessionTime);
     public float RecentSpawnedValue => _recentSpawnBuffer.GetSum(TotalSessionTime);
+    public float RecentDirectorSpawnValue => _recentDirectorSpawnBuffer.GetSum(TotalSessionTime);
     public float RecentKilledValue => _recentKillBuffer.GetSum(TotalSessionTime);
+    
+    /// <summary>
+    /// Returns kills in the last 15 seconds of gameplay.
+    /// </summary>
+    public float KillRate => _killRateBuffer.GetSum(TotalSessionTime);
+    
+    /// <summary>
+    /// Returns damage taken in the last 15 seconds of gameplay.
+    /// </summary>
+    public float DamageTakenRate => _damageRateBuffer.GetSum(TotalSessionTime);
+    
+    /// <summary>
+    /// Returns the total HP dropped in the last 5 seconds (for flailing detection).
+    /// </summary>
+    public float RecentHPDrop => _hpDropBuffer.GetSum(TotalSessionTime);
 
     public void RegisterDamageTaken(float amount)
     {
         TotalDamageTaken += amount;
         _recentDamageBuffer.Add(TotalSessionTime, amount);
+        _longTermDamageBuffer.Add(TotalSessionTime, amount);
+        _damageRateBuffer.Add(TotalSessionTime, amount);
+    }
+
+    /// <summary>
+    /// Updates HP tracking for flailing detection. Should be called every frame with current health.
+    /// </summary>
+    public void UpdateHealthTracking(float currentHealth)
+    {
+        if (_previousHealth >= 0 && currentHealth < _previousHealth)
+        {
+            float hpDrop = _previousHealth - currentHealth;
+            _hpDropBuffer.Add(TotalSessionTime, hpDrop);
+        }
+        _previousHealth = currentHealth;
+    }
+
+    public void RegisterDirectorSpawn(float value)
+    {
+        _recentDirectorSpawnBuffer.Add(TotalSessionTime, value);
     }
 
     public void RegisterEnemySpawn(float value)
@@ -37,6 +88,7 @@ public partial class PerformanceData : Node
     {
         TotalKills++;
         _recentKillBuffer.Add(TotalSessionTime, value);
+        _killRateBuffer.Add(TotalSessionTime, 1.0f); // Count kills for rate calculation
     }
 
     public void RegisterShotFired() => ShotsFired++;

@@ -10,26 +10,82 @@ public partial class Director : Node
 
     [ExportCategory("DDA Settings")]
     [Export] public float CheckInterval = 1.0f;
-    [Export] public Curve ExpectedPerformanceCurve;
-    [Export] public float ExpectedSessionDuration = 600.0f;
 
-    [ExportGroup("Performance Weights")]
-    [Export] public float WeightKills = 10.0f;
-    [Export] public float WeightHealth = 50.0f;
-    [Export] public float WeightDamageTaken = 2.0f;
+    [ExportGroup("Cp Calculation")]
+    [Export(PropertyHint.Range, "0,1,0.05")] 
+    public float CpBaseline = 0.5f;            // Neutral starting point for Cp
+    [Export(PropertyHint.Range, "0,0.5,0.05")] 
+    public float KillBonus = 0.3f;             // Max bonus from killing enemies
+    [Export(PropertyHint.Range, "0,0.5,0.05")] 
+    public float DamagePenalty = 0.3f;         // Max penalty from taking damage
+    
+    [ExportGroup("Health Safety")]
+    [Export(PropertyHint.Range, "0.3,0.7,0.05")] 
+    public float HealthSafetyThreshold = 0.5f; // HP% above this = safe (no HP penalty)
+    [Export(PropertyHint.Range, "1,3,0.1")] 
+    public float LowHealthMultiplier = 2.0f;   // How much low HP amplifies damage penalty
 
-    [ExportGroup("Flow Thresholds")]
-    [Export] public float  AnxietyThreshold = -0.2f;
-    [Export] public float BoredomThreshold = 0.2f;
+    [ExportGroup("Expected Values (Normalization - 15s windows)")]
+    [Export] public float ExpectedKillsPer15s = 5.0f;       // Expected kills in 15 seconds
+    [Export] public float MaxDamagePer15s = 20.0f;          // Max expected damage in 15 seconds
+
+    [ExportGroup("Flow Thresholds (Ratio-based)")]
+    [Export] public float ReduceThreshold = 0.8f;      // Ratio < 0.8 -> Player struggling
+    [Export] public float IntensifyThreshold = 1.2f;   // Ratio > 1.2 -> Player dominating
+
+    [ExportGroup("Flailing Detection")]
+    [Export] public float FlailingHPDropThreshold = 30.0f;  // HP drop in 5 seconds to trigger flailing
+    [Export] public float FlailingHealthThreshold = 0.3f;   // Health% below which flailing is checked
 
     [ExportGroup("Director Economy")]
-    [Export] public float PointsPerSecond = 2.0f;
+    [Export] public float BasePointsPerSecond = 1.0f;  // Base points at threshold edge
+    [Export] public float MaxPointsMultiplier = 4.0f;  // Max multiplier at extreme ratios
     [Export] public float BenefitActionPoints { get; private set; }
     [Export] public float NegativeActionPoints { get; private set; }
 
+    [ExportGroup("Smoothing")]
+    [Export] public float RatioSmoothingFactor = 0.1f;
+
     private Timer _checkTimer;
     private List<DirectorAction> _actions = new List<DirectorAction>();
-    private float _currentPerformance = 0.0f;
+    private float _smoothedRatio = 1.0f; // Start at perfect balance
+    
+    /// <summary>
+    /// Current smoothed performance ratio (Cp/Ep). Publicly accessible for states.
+    /// </summary>
+    public float CurrentRatio => _smoothedRatio;
+    
+    /// <summary>
+    /// Calculates points multiplier based on how far ratio is from Flow zone.
+    /// At threshold edge (0.8 or 1.2): returns 1.0
+    /// At extreme (0.0 or 2.0+): returns MaxPointsMultiplier
+    /// </summary>
+    public float GetPointsMultiplier()
+    {
+        float distanceFromFlow;
+        
+        if (_smoothedRatio < ReduceThreshold)
+        {
+            // REDUCE zone: distance from 0.8 toward 0
+            // At 0.8 -> 0, at 0.0 -> 0.8
+            distanceFromFlow = ReduceThreshold - _smoothedRatio;
+            float maxDistance = ReduceThreshold; // 0.8
+            float normalizedDistance = Mathf.Clamp(distanceFromFlow / maxDistance, 0f, 1f);
+            return 1.0f + (normalizedDistance * (MaxPointsMultiplier - 1.0f));
+        }
+        else if (_smoothedRatio > IntensifyThreshold)
+        {
+            // INTENSIFY zone: distance from 1.2 toward infinity (capped at 2.0)
+            // At 1.2 -> 0, at 2.0 -> 0.8
+            distanceFromFlow = _smoothedRatio - IntensifyThreshold;
+            float maxDistance = IntensifyThreshold - ReduceThreshold; // 0.8 (same scale as reduce)
+            float normalizedDistance = Mathf.Clamp(distanceFromFlow / maxDistance, 0f, 1f);
+            return 1.0f + (normalizedDistance * (MaxPointsMultiplier - 1.0f));
+        }
+        
+        // In FLOW zone - no points generation
+        return 0f;
+    }
 
     public override void _Ready()
     {
@@ -169,85 +225,139 @@ public partial class Director : Node
         if (Data == null || Data.Performance == null || Data.Player == null) return;
 
         float time = (float)Data.Performance.TotalSessionTime;
-        float expectedPerformance = CalculateExpectedPerformance(time);
-        _currentPerformance = CalculateCurrentPerformance();
+        
+        // Update HP tracking for flailing detection
+        Data.Performance.UpdateHealthTracking(Data.Player.CurrentHealth);
+        
+        // Step 1: Calculate Cp (Current Player Power)
+        float cp = CalculateCurrentPlayerPower();
+        
+        // Step 2: Get Ep (Expected Performance) from curve
+        float ep = CalculateExpectedPerformance(time);
+        
+        // Step 3: Calculate Ratio = Cp / Ep
+        float rawRatio = ep > 0 ? cp / ep : 1.0f;
+        
+        // Smooth the ratio to prevent erratic behavior
+        _smoothedRatio = Mathf.Lerp(_smoothedRatio, rawRatio, RatioSmoothingFactor);
+        
+        // Step 4: Check for Flailing (emergency override)
+        bool isFlailing = DetectFlailing();
 
+        // Emit performance metrics for debugging/UI
         SignalManager.Instance.EmitSignal(nameof(SignalManager.PerformanceMetricsUpdated), 
-            expectedPerformance, 
-            _currentPerformance, 
-            _currentPerformance, 
+            ep,                              // Expected performance
+            cp,                              // Current player power
+            _smoothedRatio,                  // Smoothed ratio
             BenefitActionPoints, 
             NegativeActionPoints,
-            Data.Performance.RecentSpawnedValue,
-            DataManager.Instance.CurrentLivingValue
+            Data.Performance.KillRate,       // Kills per minute
+            Data.Performance.DamageTakenRate,// Damage per minute
+            isFlailing ? 1.0f : 0.0f         // Flailing indicator
         );
 
-        UpdateGameState(_currentPerformance);
+        // Step 5: Determine state based on ratio and flailing
+        UpdateGameState(_smoothedRatio, isFlailing);
+    }
+
+    /// <summary>
+    /// Calculates Cp (Current Player Power) using performance-based formula:
+    /// Cp = Baseline + KillBonus - (DamagePenalty * HealthMultiplier)
+    /// 
+    /// Health only affects Cp when below safety threshold (e.g. 50%):
+    /// - Above threshold: HP doesn't matter, focus on kill/damage rate
+    /// - Below threshold: Damage penalty is amplified
+    /// 
+    /// Result is clamped to [0, 1] range
+    /// </summary>
+    private float CalculateCurrentPlayerPower()
+    {
+        // Health ratio (0 to 1)
+        float healthRatio = Data.Player.MaxHealth > 0 
+            ? Data.Player.CurrentHealth / Data.Player.MaxHealth 
+            : 1.0f;
+        
+        // Normalized Kill Rate (0 to 1+, based on expected kills in 15 seconds)
+        float killRate = Data.Performance.KillRate;
+        float normalizedKillRate = Mathf.Clamp(killRate / ExpectedKillsPer15s, 0f, 1.5f);
+        
+        // Normalized Damage Taken Rate (0 to 1, higher is worse)
+        float damageTakenRate = Data.Performance.DamageTakenRate;
+        float normalizedDamageRate = Mathf.Clamp(damageTakenRate / MaxDamagePer15s, 0f, 1.0f);
+        
+        // Health Multiplier - only activates when HP is below safety threshold
+        // Above threshold: multiplier = 1.0 (damage penalty normal)
+        // Below threshold: multiplier scales up to LowHealthMultiplier
+        float healthMultiplier = 1.0f;
+        if (healthRatio < HealthSafetyThreshold)
+        {
+            // How far below the threshold (0 = at threshold, 1 = at 0 HP)
+            float dangerLevel = 1.0f - (healthRatio / HealthSafetyThreshold);
+            healthMultiplier = 1.0f + (dangerLevel * (LowHealthMultiplier - 1.0f));
+        }
+        
+        // Final Cp calculation:
+        // Start at baseline, add kills bonus, subtract damage penalty (amplified by low HP)
+        float cp = CpBaseline 
+                 + (KillBonus * normalizedKillRate) 
+                 - (DamagePenalty * normalizedDamageRate * healthMultiplier);
+        
+        // Clamp to reasonable range [0, 1]
+        return Mathf.Clamp(cp, 0f, 1.0f);
     }
 
     private float CalculateExpectedPerformance(float time)
     {
-        // Ep[t]
-        if (ExpectedPerformanceCurve != null)
-        {
-            float normalizedTime = Mathf.Clamp(time / ExpectedSessionDuration, 0f, 1f);
-            return ExpectedPerformanceCurve.Sample(normalizedTime) * 100f; 
-        }
+        // Ep[t] - Expected performance at time t
+        // Uses GameManager's shared difficulty curve
+        float difficulty = GameManager.Instance?.CurrentDifficulty ?? 0f;
         
-        // Fallback linear formula
-        return 10.0f * (time / 60.0f) + 10.0f; 
+        // Map difficulty (0-1) to expected Cp range
+        // At difficulty 0: Ep = CpBaseline (player just started, no expectations)
+        // At difficulty 1: Ep = CpBaseline + 0.15 (player should be performing well)
+        return CpBaseline + (0.15f * difficulty);
     }
 
-    private float CalculateCurrentPerformance()
+    /// <summary>
+    /// Detects "Flailing" - when player's HP is dropping critically fast.
+    /// This is an emergency override that forces REDUCE state.
+    /// </summary>
+    private bool DetectFlailing()
     {
-        // Flow Calculation based on Recent Activity (6s window)
-        // 1. Recent Net Enemy Pressure = (RecentSpawned - RecentKilled)
-        // 2. Recent Damage Pressure = RecentDamageTaken
+        if (Data.Player.MaxHealth <= 0) return false;
         
-        float recentSpawned = Data.Performance.RecentSpawnedValue;
-        float recentKilled = Data.Performance.RecentKilledValue;
-        float recentDamage = Data.Performance.RecentDamageTaken;
-
-        // Net Pressure: Positive means more enemies spawned than killed (Overwhelmed)
-        // Negative means more killed than spawned (Clearing fast)
-        float netEnemyPressure = recentSpawned - recentKilled;
+        float healthPercent = Data.Player.CurrentHealth / Data.Player.MaxHealth;
+        float recentHPDrop = Data.Performance.RecentHPDrop;
         
-        // Normalize Pressure?
-        // We want Flow between -1 (Anxiety) and 1 (Boredom).
-        // High Pressure -> Anxiety (-1).
-        // Low/Negative Pressure -> Boredom (1).
-        
-        // Sensitivity factors
-        float enemySensitivity = 0.2f; // 5 net enemies = 1.0 pressure
-        float damageSensitivity = 0.05f; // 20 damage = 1.0 pressure
-
-        float totalPressure = (netEnemyPressure * enemySensitivity) + (recentDamage * damageSensitivity);
-
-        // If Pressure = 0 -> Flow = 1.0 (Boredom)
-        // If Pressure = 2.0 -> Flow = -1.0 (Anxiety)
-        
-        float currentPerformance = 1.0f - totalPressure;
-        
-        return currentPerformance;
+        // Flailing = Low health AND rapid HP drop in recent seconds
+        return healthPercent < FlailingHealthThreshold && recentHPDrop >= FlailingHPDropThreshold;
     }
 
-    private void UpdateGameState(float ratio)
+    private void UpdateGameState(float ratio, bool isFlailing)
     {
         if (StateMachine == null) return;
 
-        if (ratio < AnxietyThreshold)
+        // Flailing has priority - immediately rescue the player
+        if (isFlailing)
         {
-            // Player is struggling -> Reduce Difficulty
+            StateMachine.TransitionTo(DifficultyStateMachine.State.Reduce);
+            return;
+        }
+
+        // Standard ratio-based state determination
+        if (ratio < ReduceThreshold)
+        {
+            // Ratio < 0.8: Player is struggling, reduce difficulty
             StateMachine.TransitionTo(DifficultyStateMachine.State.Reduce);
         }
-        else if (ratio > BoredomThreshold)
+        else if (ratio > IntensifyThreshold)
         {
-            // Player is doing too well -> Intensify Difficulty
+            // Ratio > 1.2: Player is dominating, intensify difficulty
             StateMachine.TransitionTo(DifficultyStateMachine.State.Intensify);
         }
         else
         {
-            // Flow Channel -> Maintain
+            // 0.8 <= Ratio <= 1.2: Player is in Flow, maintain
             StateMachine.TransitionTo(DifficultyStateMachine.State.Maintain);
         }
     }

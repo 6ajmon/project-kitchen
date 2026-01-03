@@ -49,4 +49,26 @@ public partial class HealthComponent : Node2D
             _healthBar.Value = CurrentHealth;
         }
     }
+
+    public void SetMaxHealth(float newMax, bool scaleCurrent = true)
+    {
+        float oldMax = MaxHealth;
+        MaxHealth = newMax;
+        
+        if (scaleCurrent && oldMax > 0)
+        {
+            float ratio = CurrentHealth / oldMax;
+            CurrentHealth = MaxHealth * ratio;
+        }
+        else
+        {
+            CurrentHealth = Mathf.Min(CurrentHealth, MaxHealth);
+        }
+
+        if (_healthBar != null)
+        {
+            _healthBar.MaxValue = MaxHealth;
+            _healthBar.Value = CurrentHealth;
+        }
+    }
 }

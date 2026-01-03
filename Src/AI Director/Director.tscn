@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://dqu10aaib1wpa"]
+[gd_scene load_steps=14 format=3 uid="uid://dqu10aaib1wpa"]
 
 [ext_resource type="Script" uid="uid://f51mnwp02npv" path="res://Src/AI Director/Director.cs" id="1_jmqs8"]
 [ext_resource type="Script" uid="uid://x40engl8sdna" path="res://Src/AI Director/Data/DirectorData.cs" id="2_ycqpt"]
@@ -14,16 +14,10 @@
 [ext_resource type="Script" uid="uid://4no85cq6i7b" path="res://Src/AI Director/States/Intensify.cs" id="6_poo06"]
 [ext_resource type="Script" uid="uid://d3lm4q1t7effj" path="res://Src/AI Director/Actions/IncreaseSpawnRate.cs" id="7_ybp53"]
 
-[sub_resource type="Curve" id="Curve_biv7x"]
-_limits = [-1.0, 1.0, 0.0, 1.0]
-_data = [Vector2(0, 0), 0.0, 0.0, 0, 1, Vector2(1, 0), 0.0, 0.0, 1, 0]
-point_count = 2
-
 [node name="Director" type="Node" node_paths=PackedStringArray("Data", "StateMachine")]
 script = ExtResource("1_jmqs8")
 Data = NodePath("Data")
 StateMachine = NodePath("DifficultyStateMachine")
-ExpectedPerformanceCurve = SubResource("Curve_biv7x")
 
 [node name="Data" type="Node" parent="." node_paths=PackedStringArray("Performance", "Player")]
 script = ExtResource("2_ycqpt")
@@ -40,6 +34,7 @@ script = ExtResource("4_ycqpt")
 
 [node name="SpawnHorde" type="Node" parent="Actions"]
 script = ExtResource("3_n8aoe")
+HordeSize = 20
 
 [node name="BuffEnemies" type="Node" parent="Actions"]
 script = ExtResource("4_kw4te")

@@ -66,7 +66,7 @@ public partial class Level : Node
         }
 
         SpawnPlayerAtPosition(startRoomPosition);
-        SpawnEnemyAtPosition(startRoomPosition + new Vector2I(60, 0));
+        //SpawnEnemyAtPosition(startRoomPosition + new Vector2I(60, 0));
     }
 
     private void SpawnPlayerAtPosition(Vector2I position)

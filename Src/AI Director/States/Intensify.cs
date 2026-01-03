@@ -8,8 +8,12 @@ public partial class Intensify : DirectorState
     {
         if (Director == null) return;
 
+        // Calculate points based on how far above Flow threshold
+        float multiplier = Director.GetPointsMultiplier();
+        float pointsToAdd = (float)delta * Director.BasePointsPerSecond * multiplier;
+        
         // In Intensify state, we accumulate Negative Points
-        Director.AddNegativePoints((float)delta * Director.PointsPerSecond);
+        Director.AddNegativePoints(pointsToAdd);
 
         // And aggressively spend them to challenge the player
         Director.TrySpendNegativePoints();

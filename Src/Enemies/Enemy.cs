@@ -56,16 +56,31 @@ public partial class Enemy : CharacterBody2D
         
         if (HealthComponent != null)
         {
-            float oldMax = HealthComponent.MaxHealth;
-            float newMax = oldMax * multiplier;
-            HealthComponent.MaxHealth = newMax;
-            // Heal the difference so current health percentage stays same or just add the flat amount?
-            // Usually in games, if you buff max HP, you also increase current HP by the same amount or ratio.
-            // Let's increase current health by the difference.
-            HealthComponent.Heal(newMax - oldMax);
+            float newMax = HealthComponent.MaxHealth * multiplier;
+            HealthComponent.SetMaxHealth(newMax, true);
         }
         
         // Visual feedback could be added here (scale up, change color)
         Modulate = Modulate.Lerp(Colors.Red, 0.2f);
+    }
+
+    public virtual void ApplyDebuff(float percentage)
+    {
+        // Percentage is like 0.05 for 5% reduction
+        float multiplier = 1.0f - percentage;
+        if (multiplier < 0.1f) multiplier = 0.1f;
+
+        Speed *= multiplier;
+        Damage *= multiplier;
+        Scale *= multiplier;
+        
+        if (HealthComponent != null)
+        {
+            float newMax = HealthComponent.MaxHealth * multiplier;
+            HealthComponent.SetMaxHealth(newMax, true);
+        }
+        
+        // Visual feedback
+        Modulate = Modulate.Lerp(Colors.Blue, 0.2f);
     }
 }
