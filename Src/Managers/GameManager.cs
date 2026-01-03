@@ -8,6 +8,20 @@ public partial class GameManager : Node
     [ExportCategory("Session Settings")]
     [Export] public float SessionDuration = 120.0f;  // Total session length in seconds
     
+    private bool _showDebugUi = true;
+    [Export] public bool ShowDebugUi 
+    { 
+        get => _showDebugUi;
+        set 
+        {
+            _showDebugUi = value;
+            if (IsInsideTree())
+            {
+                SignalManager.Instance.EmitSignal(SignalManager.SignalName.DebugUiVisibilityChanged, value);
+            }
+        }
+    }
+    
     [ExportGroup("Difficulty Curve")]
     [Export] public Curve DifficultyCurve;           // Shared curve: X = time progress (0-1), Y = difficulty (0-1)
     

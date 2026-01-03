@@ -10,6 +10,7 @@ public partial class SignalManager : Node
     [Signal] public delegate void PerformanceDataUpdatedEventHandler(float averageAccuracy, float totalDamageTaken, double totalSessionTime, double timeSinceLastHit, int totalKills);
     [Signal] public delegate void DirectorActionExecutedEventHandler(string actionName, float cost);
     [Signal] public delegate void PerformanceMetricsUpdatedEventHandler(float expectedPerformance, float currentPlayerPower, float ratio, float benefitPoints, float negativePoints, float killRate, float damageRate, float isFlailing);
+    [Signal] public delegate void DebugUiVisibilityChangedEventHandler(bool visible);
 
     // GAMEPLAY SIGNALS
     [Signal] public delegate void EnemyKilledEventHandler();

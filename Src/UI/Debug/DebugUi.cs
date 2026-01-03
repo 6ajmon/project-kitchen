@@ -9,6 +9,8 @@ public partial class DebugUi : CanvasLayer
 
     public override void _Ready()
     {
+        Visible = GameManager.Instance.ShowDebugUi;
+
         if (_stateNameLabel == null) _stateNameLabel = GetNode<Label>("MarginContainer/HSplitContainer/VBoxContainer/HBoxContainer/StateNameLabel");
         if (_statTable == null) _statTable = GetNode<GridContainer>("MarginContainer/HSplitContainer/VBoxContainer/StatTable");
         if (_logContainer == null) _logContainer = GetNode<VBoxContainer>("MarginContainer/HSplitContainer/PanelContainer/ScrollContainer/VBoxContainer");
@@ -16,6 +18,21 @@ public partial class DebugUi : CanvasLayer
         SignalManager.Instance.DifficultyStateChanged += OnDifficultyStateChanged;
         SignalManager.Instance.DirectorActionExecuted += OnDirectorActionExecuted;
         SignalManager.Instance.PerformanceMetricsUpdated += OnPerformanceMetricsUpdated;
+        SignalManager.Instance.DebugUiVisibilityChanged += OnDebugUiVisibilityChanged;
+    }
+
+    public override void _EnterTree()
+    {
+        SignalManager.Instance.DifficultyStateChanged += OnDifficultyStateChanged;
+        SignalManager.Instance.DirectorActionExecuted += OnDirectorActionExecuted;
+        SignalManager.Instance.PerformanceMetricsUpdated += OnPerformanceMetricsUpdated;
+        SignalManager.Instance.DebugUiVisibilityChanged += OnDebugUiVisibilityChanged;
+    }
+
+
+    private void OnDebugUiVisibilityChanged(bool visible)
+    {
+        Visible = visible;
     }
 
     private void OnDifficultyStateChanged(string newStateName)
