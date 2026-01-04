@@ -39,8 +39,11 @@ public partial class EnemyRed : Enemy
         // Draw Aggro Range (Yellow)
         DrawArc(Vector2.Zero, AggroRange, 0, Mathf.Tau, 32, Colors.Yellow, 1.0f);
         
-        // Draw Deaggro Range (Red dashed-ish)
-        DrawArc(Vector2.Zero, DeaggroRange, 0, Mathf.Tau, 32, Colors.Red, 1.0f);
+        // Draw Deaggro Range (Red) - Only when aggroed
+        if (_isAggroed)
+        {
+            DrawArc(Vector2.Zero, DeaggroRange, 0, Mathf.Tau, 32, Colors.Red, 1.0f);
+        }
 
         // Draw Path
         if (_currentPath != null && _currentPath.Length > 0)
@@ -59,13 +62,14 @@ public partial class EnemyRed : Enemy
         }
         
         // Draw Line of Sight ray
+        // Show if aggroed OR if player is close enough to potentially aggro (inside AggroRange)
         if (player != null)
         {
-             Color losColor = HasLineOfSight() ? Colors.Green : Colors.Red;
-             // Only draw if within reasonable range to avoid clutter
-             if (GlobalPosition.DistanceTo(player.GlobalPosition) < DeaggroRange)
+             float dist = GlobalPosition.DistanceTo(player.GlobalPosition);
+             if (_isAggroed || dist <= AggroRange)
              {
-                DrawLine(Vector2.Zero, ToLocal(player.GlobalPosition), losColor, 1.0f);
+                 Color losColor = HasLineOfSight() ? Colors.Green : Colors.Red;
+                 DrawLine(Vector2.Zero, ToLocal(player.GlobalPosition), losColor, 1.0f);
              }
         }
     }
