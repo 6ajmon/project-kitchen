@@ -8,4 +8,5 @@ point_count = 2
 
 [node name="GameManager" type="Node"]
 script = ExtResource("1_o3jt0")
+ShowEnemyDebug = true
 DifficultyCurve = SubResource("Curve_o3jt0")

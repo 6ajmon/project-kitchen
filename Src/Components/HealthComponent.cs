@@ -4,8 +4,12 @@ public partial class HealthComponent : Node2D
 {
 
 	[Export] public float MaxHealth = 100;
+    [Export] public bool HasInvincibilityFrames = false;
+    [Export] public float InvincibilityDuration = 0.5f;
 	public float CurrentHealth;
 	private ProgressBar _healthBar;
+    private bool _isInvincible = false;
+    private Timer _invincibilityTimer;
 
     [Signal]
     public delegate void DiedEventHandler();
@@ -22,10 +26,27 @@ public partial class HealthComponent : Node2D
             _healthBar.MaxValue = MaxHealth;
             _healthBar.Value = CurrentHealth;
         }
+
+        if (HasInvincibilityFrames)
+        {
+            _invincibilityTimer = new Timer();
+            _invincibilityTimer.OneShot = true;
+            _invincibilityTimer.WaitTime = InvincibilityDuration;
+            _invincibilityTimer.Timeout += () => _isInvincible = false;
+            AddChild(_invincibilityTimer);
+        }
     }
 
 	public void TakeDamage(float damage)
 	{
+        if (_isInvincible) return;
+
+        if (HasInvincibilityFrames && _invincibilityTimer != null)
+        {
+            _isInvincible = true;
+            _invincibilityTimer.Start();
+        }
+
 		CurrentHealth -= damage;
         EmitSignal(SignalName.HealthChanged, CurrentHealth, -damage);
 

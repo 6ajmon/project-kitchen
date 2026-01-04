@@ -25,13 +25,14 @@ texture = ExtResource("1_xereb")
 shape = SubResource("CapsuleShape2D_8qe71")
 
 [node name="HitboxComponent" parent="." node_paths=PackedStringArray("HealthComponent") instance=ExtResource("3_kpvkq")]
-HealthComponent = NodePath("../HealathComponent")
+HealthComponent = NodePath("../HealthComponent")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="HitboxComponent"]
 shape = SubResource("CapsuleShape2D_kpvkq")
 
-[node name="HealathComponent" parent="." instance=ExtResource("4_rtus5")]
+[node name="HealthComponent" parent="." instance=ExtResource("4_rtus5")]
+HasInvincibilityFrames = true
 
-[node name="ProgressBar" type="ProgressBar" parent="HealathComponent"]
+[node name="ProgressBar" type="ProgressBar" parent="HealthComponent"]
 offset_right = 4.0
 offset_bottom = 27.0

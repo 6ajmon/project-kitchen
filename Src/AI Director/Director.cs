@@ -24,6 +24,8 @@ public partial class Director : Node
     public float HealthSafetyThreshold = 0.5f; // HP% above this = safe (no HP penalty)
     [Export(PropertyHint.Range, "1,3,0.1")] 
     public float LowHealthMultiplier = 2.0f;   // How much low HP amplifies damage penalty
+    [Export(PropertyHint.Range, "0,0.5,0.05")] 
+    public float LowHealthPenalty = 0.3f;      // Direct Cp penalty when HP is critically low
 
     [ExportGroup("Expected Values (Normalization - 15s windows)")]
     [Export] public float ExpectedKillsPer15s = 5.0f;       // Expected kills in 15 seconds
@@ -262,11 +264,11 @@ public partial class Director : Node
 
     /// <summary>
     /// Calculates Cp (Current Player Power) using performance-based formula:
-    /// Cp = Baseline + KillBonus - (DamagePenalty * HealthMultiplier)
+    /// Cp = Baseline + KillBonus - DamagePenalty - LowHealthPenalty
     /// 
-    /// Health only affects Cp when below safety threshold (e.g. 50%):
-    /// - Above threshold: HP doesn't matter, focus on kill/damage rate
-    /// - Below threshold: Damage penalty is amplified
+    /// Health affects Cp in two ways when below safety threshold:
+    /// 1. Direct penalty: Low HP directly reduces Cp
+    /// 2. Damage amplification: Damage taken hurts more when HP is low
     /// 
     /// Result is clamped to [0, 1] range
     /// </summary>
@@ -285,22 +287,31 @@ public partial class Director : Node
         float damageTakenRate = Data.Performance.DamageTakenRate;
         float normalizedDamageRate = Mathf.Clamp(damageTakenRate / MaxDamagePer15s, 0f, 1.0f);
         
-        // Health Multiplier - only activates when HP is below safety threshold
-        // Above threshold: multiplier = 1.0 (damage penalty normal)
-        // Below threshold: multiplier scales up to LowHealthMultiplier
-        float healthMultiplier = 1.0f;
+        // Health-based penalties (only when HP is below safety threshold)
+        float healthPenalty = 0f;
+        float damageMultiplier = 1.0f;
+        
         if (healthRatio < HealthSafetyThreshold)
         {
             // How far below the threshold (0 = at threshold, 1 = at 0 HP)
             float dangerLevel = 1.0f - (healthRatio / HealthSafetyThreshold);
-            healthMultiplier = 1.0f + (dangerLevel * (LowHealthMultiplier - 1.0f));
+            
+            // Direct HP penalty: scales from 0 at threshold to LowHealthPenalty at 0 HP
+            healthPenalty = dangerLevel * LowHealthPenalty;
+            
+            // Damage amplification: makes recent damage hurt Cp more
+            damageMultiplier = 1.0f + (dangerLevel * (LowHealthMultiplier - 1.0f));
         }
         
         // Final Cp calculation:
-        // Start at baseline, add kills bonus, subtract damage penalty (amplified by low HP)
+        // Start at baseline, add kills bonus, subtract damage penalty and direct HP penalty
         float cp = CpBaseline 
                  + (KillBonus * normalizedKillRate) 
-                 - (DamagePenalty * normalizedDamageRate * healthMultiplier);
+                 - (DamagePenalty * normalizedDamageRate * damageMultiplier)
+                 - healthPenalty;
+        
+        // DEBUG: Log Cp components
+        GD.Print($"[Cp Debug] HP%={healthRatio:F2}, dangerLvl={(healthRatio < HealthSafetyThreshold ? 1.0f - (healthRatio / HealthSafetyThreshold) : 0):F2}, hpPenalty={healthPenalty:F2}, kills={normalizedKillRate:F2}, dmg={normalizedDamageRate:F2}, Cp={cp:F2}");
         
         // Clamp to reasonable range [0, 1]
         return Mathf.Clamp(cp, 0f, 1.0f);

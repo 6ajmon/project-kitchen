@@ -12,6 +12,15 @@ public partial class PlayerBullet : Area2D
     public override void _Ready()
     {
         GetTree().CreateTimer(lifespan).Timeout += () => QueueFree();
+        BodyEntered += OnBodyEntered;
+    }
+
+    private void OnBodyEntered(Node2D body)
+    {
+        if (body is TileMapLayer)
+        {
+            QueueFree();
+        }
     }
 
     public override void _PhysicsProcess(double delta)

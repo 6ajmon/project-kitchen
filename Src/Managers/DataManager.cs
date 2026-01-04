@@ -40,6 +40,35 @@ public partial class DataManager : Node
             DirectorData.Performance.TotalSessionTime += delta;
             DirectorData.Performance.TimeSinceLastHit += delta;
         }
+        
+        // Sync Player health to PlayerData
+        SyncPlayerHealth();
+    }
+    
+    private void SyncPlayerHealth()
+    {
+        if (DirectorData?.Player == null)
+        {
+            // GD.Print("[DataManager] DirectorData.Player is null");
+            return;
+        }
+        if (Player == null)
+        {
+            // GD.Print("[DataManager] Player is null");
+            return;
+        }
+        
+        var healthComponent = Player.GetNodeOrNull<HealthComponent>("HealthComponent");
+        if (healthComponent != null)
+        {
+            DirectorData.Player.CurrentHealth = healthComponent.CurrentHealth;
+            DirectorData.Player.MaxHealth = healthComponent.MaxHealth;
+            // GD.Print($"[DataManager] Synced health: {healthComponent.CurrentHealth}/{healthComponent.MaxHealth}");
+        }
+        else
+        {
+            GD.Print("[DataManager] HealthComponent not found on Player!");
+        }
     }
 
     public void RegisterDirectorData(DirectorData data)
