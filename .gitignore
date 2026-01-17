@@ -19,3 +19,13 @@ Builds/
 # VS Code
 .vscode/
 .history/
+
+*.tex
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.fdb_latexmk
+*.fls
+*.pdf
