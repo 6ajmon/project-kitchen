@@ -7,6 +7,7 @@
 
 # builds
 bin/
+obj/
 Builds/
 *.exe
 *.dll
@@ -15,11 +16,20 @@ Builds/
 *.mono-temp/
 *.csproj.user
 
+# NuGet
+packages/
+
+# Test results
+TestResults/
+*.trx
 
 # VS Code
 .vscode/
-.history/
 
+# JetBrains Rider
+.idea/
+
+# LaTeX
 *.tex
 *.aux
 *.log
@@ -29,3 +39,7 @@ Builds/
 *.fdb_latexmk
 *.fls
 *.pdf
+
+# OS
+.DS_Store
+Thumbs.db
